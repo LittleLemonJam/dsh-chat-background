@@ -1,0 +1,107 @@
+{
+  "name": "05-rightbar",
+  "allowConsoleErrors": [],
+  "seed": {
+    "dsh-chat-background:selection": "sample-background.png",
+    "dsh-chat-background:scrim-left": "45",
+    "dsh-chat-background:scrim-main": "10",
+    "dsh-chat-background:scrim-right": "45"
+  },
+  "steps": [
+    {
+      "wait": 12000
+    },
+    {
+      "wait": 600
+    },
+    {
+      "wait": 2500
+    },
+    {
+      "log": "right sidebar collapse/expand animates the layout grid"
+    },
+    {
+      "eval": "(() => { const button = [...document.querySelectorAll('button[aria-label]')].find((item) => /打开右侧边栏|open right sidebar/i.test(item.getAttribute('aria-label'))); if (button === undefined) return 'MISSING OPEN'; button.click(); return 'clicked open'; })()"
+    },
+    {
+      "wait": 1600
+    },
+    {
+      "check": "layout frame is marked and has no permanent transition",
+      "expr": "(() => { const frame = document.querySelector('[data-dsh-chat-background-frame]'); if (frame === null) return false; return getComputedStyle(frame).transitionDuration === '0s'; })()"
+    },
+    {
+      "eval": "(() => { const frame = document.querySelector('[data-dsh-chat-background-frame]'); if (frame === null) return 'NO FRAME'; const before = frame.getAttribute('style'); frame.style.gridTemplateColumns = '280px minmax(400px, 1fr) minmax(0px, 500px)'; const duration = getComputedStyle(frame).transitionDuration; const animating = frame.hasAttribute('data-dsh-chat-background-frame-animating'); frame.setAttribute('style', before ?? ''); return JSON.stringify({ duration, animating }); })()"
+    },
+    {
+      "check": "dragging the sidebar edge is not delayed by a transition",
+      "expr": "(() => { const frame = document.querySelector('[data-dsh-chat-background-frame]'); if (frame === null) return false; return getComputedStyle(frame).transitionDuration === '0s' && !frame.hasAttribute('data-dsh-chat-background-frame-animating'); })()"
+    },
+    {
+      "check": "normal right sidebar paints the panel at the column size",
+      "expr": "(() => { const panel = document.querySelector('[data-dsh-chat-background-right-panel]'); const outlet = document.querySelector('[data-slot=\"rightbar\"]'); const column = outlet === null ? null : outlet.parentElement; if (panel === null || column === null) return false; const panelRect = panel.getBoundingClientRect(); const columnRect = column.getBoundingClientRect(); const after = getComputedStyle(column, '::after').backgroundImage; return Math.abs(panelRect.width - columnRect.width) <= 2 && Math.abs(panelRect.height - columnRect.height) <= 2 && getComputedStyle(panel).backgroundImage === 'none' && after.includes('linear-gradient') && getComputedStyle(panel).backgroundColor === 'rgba(0, 0, 0, 0)' && getComputedStyle(column, '::after').display !== 'none'; })()"
+    },
+    {
+      "eval": "(async () => { const column = (slot) => { const outlet = document.querySelector('[data-slot=\"' + slot + '\"]'); return outlet === null ? null : outlet.parentElement; }; const sample = () => ({ main: Math.round(column('main')?.getBoundingClientRect().width ?? -1), right: Math.round(column('rightbar')?.getBoundingClientRect().width ?? -1) }); const frames = [sample()]; const button = [...document.querySelectorAll('button[aria-label]')].find((item) => /收起右侧边栏|collapse right sidebar|close right sidebar/i.test(item.getAttribute('aria-label'))); if (button === undefined) return 'NO COLLAPSE'; const frame = column('main')?.parentElement ?? null; button.click(); if (frame !== null) window.__rightbarDuring = { animating: frame.hasAttribute('data-dsh-chat-background-frame-animating'), duration: getComputedStyle(frame).transitionDuration }; for (const delay of [30, 80, 140, 220, 380]) { await new Promise((resolve) => setTimeout(resolve, delay)); frames.push(sample()); } window.__rightbarFrames = JSON.stringify(frames); return window.__rightbarFrames; })()"
+    },
+    {
+      "check": "collapsing the right sidebar moves through intermediate column widths",
+      "expr": "(() => { const frames = (() => { try { return JSON.parse(window.__rightbarFrames ?? 'null'); } catch { return null; } })(); const during = window.__rightbarDuring ?? null; return frames !== null && frames.length >= 5 && frames[0].right > 400 && frames[frames.length - 1].right === 0 && frames.slice(1, -1).some((frame) => frame.right > 10 && frame.right < 600) && during !== null && during.animating === true && String(during.duration).includes('0.3s'); })()"
+    },
+    {
+      "check": "collapsed right sidebar leaves no scrim rectangle behind",
+      "expr": "(() => { const panel = document.querySelector('[data-dsh-chat-background-right-panel]'); const outlet = document.querySelector('[data-slot=\"rightbar\"]'); const column = outlet === null ? null : outlet.parentElement; if (panel === null || column === null) return false; return column.getBoundingClientRect().width === 0 && getComputedStyle(panel).backgroundImage === 'none' && !panel.hasAttribute('data-dsh-chat-background-right-panel-full'); })()"
+    },
+    {
+      "log": "fullscreen right sidebar paints one background + scrim layer"
+    },
+    {
+      "eval": "(() => { const button = [...document.querySelectorAll('button[aria-label]')].find((item) => /打开右侧边栏|open right sidebar/i.test(item.getAttribute('aria-label'))); if (button === undefined) return 'MISSING OPEN'; button.click(); return 'clicked open'; })()"
+    },
+    {
+      "wait": 1200
+    },
+    {
+      "eval": "(() => { const target = [...document.querySelectorAll('button[aria-label]')].find((button) => /^全屏$|^fullscreen$/i.test(button.getAttribute('aria-label'))); target?.click(); return target === undefined ? 'NO FULLSCREEN' : 'fullscreen'; })()"
+    },
+    {
+      "wait": 3500
+    },
+    {
+      "eval": "(() => { const root=document.documentElement; const main=document.querySelector('[data-slot=\"main\"]')?.parentElement??null; const left=document.querySelector('[data-slot=\"sidebar\"]')?.parentElement??null; const right=document.querySelector('[data-slot=\"rightbar\"]')?.parentElement??null; return JSON.stringify({root:root.hasAttribute('data-dsh-chat-background-right-fullscreen'), main:main===null?null:getComputedStyle(main).visibility, left:left===null?null:getComputedStyle(left).visibility, scrim:getComputedStyle(root,'::before').backgroundImage.slice(0,120), rightAfter:right===null?null:getComputedStyle(right,'::after').display, htmlAttrs:[...root.attributes].map(a=>a.name).slice(0,20)}); })()"
+    },
+    {
+      "check": "fullscreen keeps the left sidebar and covers only the rest of the window",
+      "expr": "(() => {\n  const root = document.documentElement\n  const main = document.querySelector('[data-slot=\"main\"]')?.parentElement ?? null\n  const left = document.querySelector('[data-slot=\"sidebar\"]')?.parentElement ?? null\n  const panel = document.querySelector('[data-dsh-chat-background-right-panel]')\n  if (main === null || left === null || panel === null) return false\n  const leftWidth = left.getBoundingClientRect().width\n  const panelRect = panel.getBoundingClientRect()\n  const style = getComputedStyle(panel)\n  return root.hasAttribute('data-dsh-chat-background-right-fullscreen') && getComputedStyle(left).visibility === 'visible' && getComputedStyle(main).visibility === 'hidden' && panelRect.left >= leftWidth - 2 && panelRect.right >= window.innerWidth - 2 && panelRect.width >= window.innerWidth - leftWidth - 2 && style.backgroundImage.includes('/chat-backgrounds/files/sample-background.png') && style.backgroundImage.includes('linear-gradient')\n})()"
+    },
+    {
+      "shot": "05-rightbar-fullscreen"
+    },
+    {
+      "eval": "(() => { const exit = [...document.querySelectorAll('button[aria-label]')].find((button) => /退出全屏|exit fullscreen/i.test(button.getAttribute('aria-label'))); exit?.click(); return 'exit fullscreen'; })()"
+    },
+    {
+      "wait": 120
+    },
+    {
+      "check": "fullscreen switches off in one unanimated step",
+      "expr": "(() => {\n  const root = document.documentElement\n  const main = document.querySelector('[data-slot=\"main\"]')?.parentElement ?? null\n  const rightbar = document.querySelector('[data-slot=\"rightbar\"]')\n  if (main === null || rightbar === null) return false\n  const cell = [...rightbar.querySelectorAll('*')].find((el) => String(el.className).includes('tabCell'))\n  const duration = cell === null ? null : getComputedStyle(cell).transitionDuration\n  return !root.hasAttribute('data-dsh-chat-background-right-fullscreen') && getComputedStyle(main).visibility === 'visible' && root.hasAttribute('data-dsh-chat-background-no-animation') && (duration === null || duration === '0s')\n})()"
+    },
+    {
+      "wait": 800
+    },
+    {
+      "check": "exiting fullscreen restores the main layout and clears the marker",
+      "expr": "(() => { const root = document.documentElement; const main = document.querySelector('[data-slot=\"main\"]')?.parentElement ?? null; const panel = document.querySelector('[data-dsh-chat-background-right-panel]'); return main !== null && getComputedStyle(main).visibility === 'visible' && !root.hasAttribute('data-dsh-chat-background-right-fullscreen') && (panel === null || !panel.hasAttribute('data-dsh-chat-background-right-panel-full')); })()"
+    },
+    {
+      "wait": 800
+    },
+    {
+      "eval": "(() => { const collapse = [...document.querySelectorAll('button[aria-label]')].find((button) => button.getAttribute('aria-label') === '收起右侧边栏'); collapse?.click(); return 'collapse rightbar'; })()"
+    },
+    {
+      "wait": 800
+    }
+  ]
+}

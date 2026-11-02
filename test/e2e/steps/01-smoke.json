@@ -1,0 +1,201 @@
+{
+  "name": "01-smoke",
+  "allowConsoleErrors": [],
+  "seed": {
+    "dsh-chat-background:selection": "sample-background.png",
+    "dsh-chat-background:scrim-left": "45",
+    "dsh-chat-background:scrim-main": "10",
+    "dsh-chat-background:scrim-right": "45"
+  },
+  "steps": [
+    {
+      "wait": 12000
+    },
+    {
+      "log": "dismiss the preview notice and the start dialog, then create a session"
+    },
+    {
+      "clickText": "继续",
+      "tag": "button"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "clickText": "新会话",
+      "tag": "button"
+    },
+    {
+      "wait": 2000
+    },
+    {
+      "click": "[role=\"dialog\"] [aria-label=\"关闭\"]"
+    },
+    {
+      "wait": 1200
+    },
+    {
+      "log": "background applied"
+    },
+    {
+      "check": "background marker present",
+      "expr": "document.documentElement.hasAttribute('data-dsh-chat-background')"
+    },
+    {
+      "check": "background image is painted by an image layer (animated formats)",
+      "expr": "(() => {\n  const layer = document.querySelector('[data-dsh-chat-background-layer]')\n  if (layer === null) return false\n  return layer.tagName === 'IMG' && (layer.getAttribute('src') || '').includes('/chat-backgrounds/files/sample-background.png') && getComputedStyle(layer).objectFit === 'cover'\n})()"
+    },
+    {
+      "check": "background image points at the selected file",
+      "expr": "(document.documentElement.style.getPropertyValue('--dsh-chat-background-image') || '').includes('/chat-backgrounds/files/sample-background.png')"
+    },
+    {
+      "check": "per-region scrim variables carry the stored values",
+      "expr": "(() => { const root = document.documentElement.style; return root.getPropertyValue('--dsh-chat-background-scrim-main').includes('0.100') && root.getPropertyValue('--dsh-chat-background-scrim-left').includes('0.450') && root.getPropertyValue('--dsh-chat-background-scrim-right').includes('0.450'); })()"
+    },
+    {
+      "check": "static stylesheet installed",
+      "expr": "document.querySelector('style[data-plugin-css=\"dsh-chat-background/background.css\"]') !== null"
+    },
+    {
+      "check": "measured painter rules installed",
+      "expr": "document.querySelector('style[data-plugin-css=\"dsh-chat-background/measured.css\"]') !== null"
+    },
+    {
+      "log": "inject the composer usage row on the app's stable hooks"
+    },
+    {
+      "eval": "(() => { const wrapper = document.querySelector('[data-slot=\"conversation.composer.bar\"] > *'); if (wrapper === null) return 'NO WRAPPER'; const dock = wrapper.querySelector('[data-composer-dock]'); if (dock === null) return 'NO DOCK'; dock.style.setProperty('display', 'flex', 'important'); dock.style.setProperty('align-items', 'center', 'important'); dock.style.setProperty('gap', '12px', 'important'); dock.style.setProperty('font-size', '12px', 'important'); dock.style.setProperty('height', '20px', 'important'); const labels = ['13 轮 498 步 · 276 tok/s', '124M tok · 缓存命中 99.7%']; for (const label of labels) { const span = document.createElement('span'); span.setAttribute('data-composer-stat', 'usage'); span.textContent = label; dock.appendChild(span); } return 'dock populated'; })()"
+    },
+    {
+      "wait": 1500
+    },
+    {
+      "check": "composer strip rendered",
+      "expr": "document.querySelector('[data-dsh-chat-strip]') !== null"
+    },
+    {
+      "check": "composer strip covers the usage row and matches the input card width",
+      "expr": "(() => { const strip = document.querySelector('[data-dsh-chat-strip]'); const wrapper = document.querySelector('[data-slot=\"conversation.composer.bar\"] > *'); const dock = wrapper === null ? null : wrapper.querySelector('[data-composer-dock]'); if (strip === null || dock === null) return false; const editor = wrapper.querySelector('textarea, [contenteditable=\"true\"]'); let card = null; for (let el = editor; el !== null && el !== wrapper; el = el.parentElement) { const style = getComputedStyle(el); if (style.backgroundColor !== 'rgba(0, 0, 0, 0)' || style.backgroundImage !== 'none') { card = el; break; } } if (card === null) return false; const s = strip.getBoundingClientRect(); const d = dock.getBoundingClientRect(); const c = card.getBoundingClientRect(); return s.top <= d.top + 2 && s.bottom >= d.bottom - 2 && Math.abs(s.width - c.width) <= 2; })()"
+    },
+    {
+      "log": "progress bar and token line"
+    },
+    {
+      "check": "progress bar hides while idle and reports its state in diagnostics",
+      "expr": "(() => { const row = document.querySelector('.dshcb-progress-row'); const diagnostics = window.__dshcb?.diagnostics?.(); return row === null && diagnostics !== undefined && diagnostics.progress?.idle === true && diagnostics.progress?.visible === false; })()"
+    },
+    {
+      "check": "token line present above the account menu",
+      "expr": "(() => { const node = document.querySelector('[data-dsh-token-total]'); if (node === null) return false; const account = document.querySelector('[aria-label=\"账号菜单\"]'); if (account === null) return false; const n = node.getBoundingClientRect(); const a = account.getBoundingClientRect(); return node.innerText.includes('Token') && n.bottom <= a.top + 1; })()"
+    },
+    {
+      "check": "token line text left edge aligns with the account row content edge",
+      "expr": "(() => { const token = document.querySelector('[data-dsh-token-total]'); const account = document.querySelector('[aria-label=\"账号菜单\"]'); if (token === null || account === null) return false; const accountPadding = Number.parseFloat(getComputedStyle(account).paddingLeft) || 0; const tokenPadding = Number.parseFloat(getComputedStyle(token).paddingLeft) || 0; const tokenTextLeft = token.getBoundingClientRect().left + tokenPadding; const accountContentLeft = account.getBoundingClientRect().left + accountPadding; return Math.abs(tokenTextLeft - accountContentLeft) <= 1; })()"
+    },
+    {
+      "log": "right sidebar surfaces yield to the background image"
+    },
+    {
+      "click": "[aria-label=\"打开右侧边栏\"]"
+    },
+    {
+      "wait": 1500
+    },
+    {
+      "check": "right sidebar pane is transparent while a background is active",
+      "expr": "(() => { const pane = document.querySelector('[data-slot=\"rightbar\"] section'); if (pane === null) return 'NO PANE'; const style = getComputedStyle(pane); return style.backgroundColor === 'rgba(0, 0, 0, 0)' && style.backgroundImage === 'none'; })()"
+    },
+    {
+      "click": "[aria-label=\"收起右侧边栏\"]"
+    },
+    {
+      "wait": 800
+    },
+    {
+      "shot": "01-main-ui"
+    },
+    {
+      "log": "open settings → page settings and inspect the Background and UI tabs"
+    },
+    {
+      "click": "[aria-label=\"账号菜单\"]"
+    },
+    {
+      "wait": 800
+    },
+    {
+      "clickText": "设置",
+      "tag": "button"
+    },
+    {
+      "wait": 2500
+    },
+    {
+      "check": "Page settings section appears between General and Models",
+      "expr": "(() => { const labels = ['通用设置', '页面设置', '模型']; const navButtons = [...document.querySelectorAll('button')].filter((button) => labels.includes(button.innerText.trim())); return JSON.stringify(navButtons.map((button) => button.innerText.trim())) === JSON.stringify(labels); })()"
+    },
+    {
+      "clickText": "页面设置",
+      "tag": "button"
+    },
+    {
+      "wait": 1500
+    },
+    {
+      "check": "Page settings exposes Background and UI tabs with Background active",
+      "expr": "(() => { const tabs = [...document.querySelectorAll('.dshcb-section .dshcb-tab')].map((tab) => tab.innerText.trim()); const active = document.querySelector('.dshcb-section .dshcb-tab-active'); const panel = document.querySelector('.dshcb-section .dshcb-tab-panel'); const controls = [...document.querySelectorAll('.dshcb-section .dshcb-tab')].every((tab) => tab.getAttribute('aria-controls') === panel.id); return JSON.stringify(tabs) === JSON.stringify(['背景', 'UI']) && active !== null && active.innerText.trim() === '背景' && active.getAttribute('aria-selected') === 'true' && controls && panel.getAttribute('aria-labelledby') === active.id; })()"
+    },
+    {
+      "check": "Background tab starts with the background block and three scrim rows",
+      "expr": "(() => { const panel = document.querySelector('.dshcb-section .dshcb-tab-panel'); if (panel === null || panel.firstElementChild === null) return false; const titles = [...panel.querySelectorAll('.dshcb-row .dshcb-title')].map((el) => el.innerText.trim()); return panel.firstElementChild.classList.contains('dshcb-background-block') && JSON.stringify(titles) === JSON.stringify(['背景显示方式', '轮换设置', '轮换分组', '左侧栏遮罩层', '主窗口遮罩层', '右侧栏遮罩层']); })()"
+    },
+    {
+      "check": "background preview shows the selected image",
+      "expr": "(() => { const preview = document.querySelector('.dshcb-bg-preview'); if (preview === null) return false; return getComputedStyle(preview).backgroundImage.includes('sample-background.png') && preview.getBoundingClientRect().height >= 120; })()"
+    },
+    {
+      "check": "file line shows the current image name and both folder actions",
+      "expr": "(() => { const line = document.querySelector('.dshcb-bg-file'); if (line === null) return false; const select = line.querySelector('select'); const buttons = [...line.querySelectorAll('button')].map((button) => button.innerText.trim()); return select !== null && select.value === 'sample-background.png' && buttons.length === 2 && buttons.some((label) => label.includes('打开')) && buttons.some((label) => label.includes('重新扫描')); })()"
+    },
+    {
+      "check": "scrim rows carry no description text",
+      "expr": "(() => { const rows = [...document.querySelectorAll('.dshcb-section .dshcb-tab-panel .dshcb-row')]; const scrim = rows.filter((row) => ['左侧栏遮罩层', '主窗口遮罩层', '右侧栏遮罩层'].includes(row.querySelector('.dshcb-title')?.innerText.trim())); return rows.length === 6 && scrim.length === 3 && scrim.every((row) => row.querySelector('.dshcb-desc') === null); })()"
+    },
+    {
+      "check": "Background rows are separated by the default divider line",
+      "expr": "(() => { const rows = [...document.querySelectorAll('.dshcb-section .dshcb-tab-panel .dshcb-row')]; return rows.length === 6 && rows.slice(0, -1).every((row) => Number.parseFloat(getComputedStyle(row).borderBottomWidth) > 0); })()"
+    },
+    {
+      "shot": "01-smoke-settings-background"
+    },
+    {
+      "clickText": "UI"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "check": "UI tab keeps the app tab styling and groups rows into three cards",
+      "expr": "(() => { const active = document.querySelector('.dshcb-section .dshcb-tab-active'); const cards = [...document.querySelectorAll('.dshcb-section .dshcb-card')]; if (active === null || active.innerText.trim() !== 'UI' || cards.length !== 3) return false; return cards.every((card) => card.querySelectorAll('.dshcb-row').length === 2); })()"
+    },
+    {
+      "check": "UI cards use the app card border line and radius",
+      "expr": "(() => { const card = document.querySelector('.dshcb-section .dshcb-card'); if (card === null) return false; const style = getComputedStyle(card); return Number.parseFloat(style.borderTopWidth) === 1 && Number.parseFloat(style.borderTopLeftRadius) >= 12 && style.borderTopStyle !== 'none'; })()"
+    },
+    {
+      "check": "UI tab shows the six component settings in order",
+      "expr": "(() => { const titles = [...document.querySelectorAll('.dshcb-section .dshcb-card .dshcb-row .dshcb-title')].map((el) => el.innerText.trim()); return JSON.stringify(titles) === JSON.stringify(['输入栏下方背景条', '背景条颜色', '任务进度条', '进度条颜色', 'Token 总用量', 'Token 字号']); })()"
+    },
+    {
+      "check": "UI rows have controls and descriptions",
+      "expr": "(() => { const rows = [...document.querySelectorAll('.dshcb-section .dshcb-card .dshcb-row')]; return rows.length === 6 && rows.every((row) => { const descriptionId = row.getAttribute('aria-describedby'); return row.querySelector('.dshcb-control') !== null && descriptionId !== null && document.getElementById(descriptionId) !== null; }); })()"
+    },
+    {
+      "shot": "01-smoke-settings"
+    },
+    {
+      "wait": 300
+    }
+  ]
+}

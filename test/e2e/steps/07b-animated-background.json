@@ -1,0 +1,48 @@
+{
+  "name": "07b-animated-background",
+  "allowConsoleErrors": [],
+  "seed": {
+    "dsh-chat-background:selection": "sample-animation.gif",
+    "dsh-chat-background:scrim-left": "45",
+    "dsh-chat-background:scrim-main": "10",
+    "dsh-chat-background:scrim-right": "45",
+    "dsh-chat-background:mode": "fixed"
+  },
+  "steps": [
+    {
+      "eval": "(() => { window.location.reload(); return 'reload'; })()"
+    },
+    {
+      "wait": 12000
+    },
+    {
+      "wait": 12000
+    },
+    {
+      "eval": "(() => { const dismiss = [...document.querySelectorAll('button')].find((button) => ['继续', 'Continue'].includes(button.innerText.trim())); dismiss?.click(); const close = document.querySelector('[role=\"dialog\"] [aria-label=\"关闭\"], [role=\"dialog\"] [aria-label=\"Close\"]'); close?.click(); return 'ready'; })()"
+    },
+    {
+      "wait": 1200
+    },
+    {
+      "eval": "(async () => { const start=Date.now(); while(Date.now()-start<12000){ const layer=document.querySelector('[data-dsh-chat-background-layer]'); if(layer!==null && layer.tagName==='IMG' && layer.complete===true && layer.naturalWidth>0) return 'loaded'; await new Promise((resolve)=>setTimeout(resolve,100)); } return 'timeout'; })()"
+    },
+    {
+      "check": "animated GIF is painted by a loaded image layer",
+      "expr": "(async () => { const start=Date.now(); while(Date.now()-start<12000){ const layer=document.querySelector('[data-dsh-chat-background-layer]'); if(layer!==null && layer.tagName==='IMG' && (layer.getAttribute('src')||'').includes('/chat-backgrounds/files/sample-animation.gif') && layer.complete===true && layer.naturalWidth===64) return true; await new Promise((resolve)=>setTimeout(resolve,100)); } return false; })()"
+    },
+    {
+      "check": "the html background no longer paints the image (root backgrounds freeze animated formats)",
+      "expr": "(() => { const image = getComputedStyle(document.documentElement).backgroundImage; return image === 'none' || !image.includes('sample-animation.gif'); })()"
+    },
+    {
+      "shot": "07b-animated-a"
+    },
+    {
+      "wait": 450
+    },
+    {
+      "shot": "07b-animated-b"
+    }
+  ]
+}

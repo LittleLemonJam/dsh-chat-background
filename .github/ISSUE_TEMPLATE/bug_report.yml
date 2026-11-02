@@ -1,0 +1,81 @@
+name: Bug report / 缺陷报告
+description: 报告可以复现的问题 / Report a reproducible problem
+title: '[bug] '
+labels: ['bug', 'needs-triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！提交前请先搜索已有 Issue，并确认问题能在最新版本复现。
+        安全漏洞请不要公开提交，见 [SECURITY.md](../blob/main/SECURITY.md)。
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: 插件版本 / Plugin version
+      description: 见设置 → 插件列表，或 package.json
+      placeholder: '1.0.0'
+    validations:
+      required: true
+
+  - type: input
+    id: dsh-version
+    attributes:
+      label: DSH 版本 / DSH version
+      description: 桌面端版本号（设置 → 关于）与 Electron 版本
+      placeholder: '0.2.1-rc.3 (Electron 44.7.0)'
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 现象 / What happened
+      description: 描述实际行为与期望行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤 / Steps to reproduce
+      placeholder: |
+        1. 打开设置 → 页面设置
+        2. 选择背景图并打开「侧栏透出背景」
+        3. 切换到新会话
+        4. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 证据 / Evidence
+      description: 截图、`consoleErrors`、`GET /chat-backgrounds/list` 返回、相关 DOM 测量值等
+      render: shell
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 影响范围 / Area
+      multiple: true
+      options:
+        - 背景图 / background image
+        - 侧栏柔化或遮罩 / sidebar veil or window scrim
+        - 输入栏下方背景条 / composer strip
+        - 任务进度条 / task progress bar
+        - Token 总用量 / token total line
+        - 设置页 / settings rows
+        - 宿主路由 / host routes
+        - 安装/构建 / install or build
+        - 其它 / other
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境 / Environment
+      placeholder: |
+        OS: Windows 11 23H2
+        Browser: Electron 44.7.0 (Chromium)
+        Locale: zh-CN
+        主题: 浅色

@@ -1,0 +1,37 @@
+{
+  "name": "04-host-routes",
+  "allowConsoleErrors": [],
+  "seed": {},
+  "steps": [
+    {
+      "wait": 10000
+    },
+    {
+      "check": "list route reports the folder and only image files",
+      "expr": "(async () => { const response = await fetch('/chat-backgrounds/list'); if (!response.ok) return false; const payload = await response.json(); const names = payload.images.map((entry) => entry.name); return typeof payload.folder === 'string' && payload.folder.includes('backgrounds') && payload.folder.startsWith('~') && names.includes('sample-background.png') && names.includes('probe.svg') && !names.includes('notes.txt') && payload.images.every((entry) => entry.bytes > 0 && typeof entry.rev === 'string') && payload.accepted.includes('.png'); })()"
+    },
+    {
+      "check": "HEAD list answers without a body",
+      "expr": "(async () => { const response = await fetch('/chat-backgrounds/list', { method: 'HEAD' }); if (!response.ok) return false; const text = await response.text(); return text === ''; })()"
+    },
+    {
+      "check": "image route serves the file with an entity tag and revalidates",
+      "expr": "(async () => { const first = await fetch('/chat-backgrounds/files/sample-background.png'); if (!first.ok) return false; if (first.headers.get('content-type') !== 'image/png') return false; const etag = first.headers.get('etag'); if (etag === null) return false; const second = await fetch('/chat-backgrounds/files/sample-background.png', { headers: { 'if-none-match': etag } }); return second.status === 304; })()"
+    },
+    {
+      "check": "image route rejects traversal and unknown files",
+      "expr": "(async () => { const encoded = await fetch('/chat-backgrounds/files/..%2Fnotes.txt'); const plain = await fetch('/chat-backgrounds/files/notes.txt'); const unknown = await fetch('/chat-backgrounds/nope'); return encoded.status === 404 && plain.status === 404 && unknown.status === 404; })()"
+    },
+    {
+      "check": "folder route requires POST and the plugin header",
+      "expr": "(async () => { const get = await fetch('/chat-backgrounds/folder'); const post = await fetch('/chat-backgrounds/folder', { method: 'POST' }); return get.status === 405 && post.status === 403; })()"
+    },
+    {
+      "check": "token total is internally consistent",
+      "expr": "(async () => { const response = await fetch('/chat-backgrounds/token-total'); if (!response.ok) return false; const payload = await response.json(); const sum = payload.uncachedInputTokens + payload.outputTokens + payload.cacheReadTokens + payload.cacheWriteTokens; return payload.total === sum && Number.isInteger(payload.sessions) && Number.isInteger(payload.countedSessions) && payload.countedSessions <= payload.sessions; })()"
+    },
+    {
+      "shot": "04-host-routes"
+    }
+  ]
+}

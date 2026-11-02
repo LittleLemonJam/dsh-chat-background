@@ -1,0 +1,173 @@
+{
+  "name": "03-robustness",
+  "allowConsoleErrors": [],
+  "seed": {
+    "dsh-chat-background:selection": "sample-background.png",
+    "dsh-chat-background:scrim-left": "45",
+    "dsh-chat-background:scrim-main": "10",
+    "dsh-chat-background:scrim-right": "45"
+  },
+  "steps": [
+    {
+      "wait": 12000
+    },
+    {
+      "clickText": "继续",
+      "tag": "button"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "clickText": "新会话",
+      "tag": "button"
+    },
+    {
+      "wait": 3000
+    },
+    {
+      "log": "stable hooks: pills behind a display:contents outlet, English-only wording"
+    },
+    {
+      "eval": "(() => { const wrapper = document.querySelector('[data-slot=\"conversation.composer.bar\"] > *'); const dock = wrapper === null ? null : wrapper.querySelector('[data-composer-dock]'); if (dock === null) return 'NO DOCK'; dock.style.setProperty('display', 'flex', 'important'); dock.style.setProperty('align-items', 'center', 'important'); dock.style.setProperty('gap', '12px', 'important'); dock.style.setProperty('font-size', '12px', 'important'); const outlet = document.createElement('div'); outlet.style.display = 'contents'; window.__outlet = outlet; dock.appendChild(outlet); window.__addPills = (labels) => { for (const label of labels) { const span = document.createElement('span'); span.setAttribute('data-composer-stat', 'usage'); span.textContent = label; outlet.appendChild(span); } return outlet.querySelectorAll('[data-composer-stat]').length; }; window.__removePills = () => { for (const pill of [...outlet.querySelectorAll('[data-composer-stat]')]) pill.remove(); return outlet.querySelectorAll('[data-composer-stat]').length; }; window.__pillUnion = () => { const pills = [...wrapper.querySelectorAll('[data-composer-stat]')].map((el) => el.getBoundingClientRect()).filter((rect) => rect.width > 0 && rect.height > 0); if (pills.length === 0) return null; const left = Math.min(...pills.map((rect) => rect.left)); const top = Math.min(...pills.map((rect) => rect.top)); const right = Math.max(...pills.map((rect) => rect.right)); const bottom = Math.max(...pills.map((rect) => rect.bottom)); return { left, top, right, bottom, width: right - left, height: bottom - top }; }; window.__addPills(['12 turns · 340 steps', 'Cache hit 99.7% · context 49%']); return 'stable hooks injected'; })()"
+    },
+    {
+      "wait": 2500
+    },
+    {
+      "check": "strip appears from the stable hooks alone (no Chinese wording, no tok/s)",
+      "expr": "(() => { const strip = document.querySelector('[data-dsh-chat-strip]'); if (strip === null || typeof window.__pillUnion !== 'function') return false; const union = window.__pillUnion(); if (union === null) return false; const rect = strip.getBoundingClientRect(); return union.width > 120 && union.height > 0 && rect.top <= union.top + 2 && rect.bottom >= union.bottom - 2; })()"
+    },
+    {
+      "log": "zero layout impact and no fixed-position containing block"
+    },
+    {
+      "eval": "(() => { const wrapper = document.querySelector('[data-slot=\"conversation.composer.bar\"] > *'); const dock = document.querySelector('[data-composer-dock]'); const editor = wrapper.querySelector('textarea, [contenteditable=\"true\"]'); let card = null; for (let el = editor; el !== null && el !== wrapper; el = el.parentElement) { const style = getComputedStyle(el); if (style.backgroundColor !== 'rgba(0, 0, 0, 0)' || style.backgroundImage !== 'none') { card = el; break; } } const send = [...wrapper.querySelectorAll('button')].map((button) => button.getBoundingClientRect()).sort((a, b) => b.right - a.right)[0]; const probe = document.createElement('div'); probe.id = 'fixed-probe'; probe.style.cssText = 'position:fixed;left:100px;top:100px;width:40px;height:20px;background:rgb(255,0,0);z-index:9999;'; wrapper.appendChild(probe); const rect = (element) => { const r = element.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]; }; window.__layout = { dock: rect(dock), card: card === null ? null : rect(card), sendRight: Math.round(send.right), probe: rect(probe) }; return JSON.stringify(window.__layout); })()"
+    },
+    {
+      "wait": 400
+    },
+    {
+      "check": "fixed probe sits at the viewport coordinate it asked for",
+      "expr": "(() => { const probe = document.getElementById('fixed-probe'); if (probe === null) return false; const rect = probe.getBoundingClientRect(); return Math.abs(rect.left - 100) <= 1 && Math.abs(rect.top - 100) <= 1; })()"
+    },
+    {
+      "eval": "(() => { localStorage.setItem('dsh-chat-background:strip', 'off'); window.dispatchEvent(new StorageEvent('storage', { key: 'dsh-chat-background:strip' })); window.dispatchEvent(new Event('resize')); return 'strip off'; })()"
+    },
+    {
+      "wait": 1800
+    },
+    {
+      "check": "strip is removed while it is switched off",
+      "expr": "document.querySelector('[data-dsh-chat-strip]') === null"
+    },
+    {
+      "check": "removing the strip leaves the composer layout untouched",
+      "expr": "(() => { const wrapper = document.querySelector('[data-slot=\"conversation.composer.bar\"] > *'); const dock = document.querySelector('[data-composer-dock]'); const probe = document.getElementById('fixed-probe'); const editor = wrapper.querySelector('textarea, [contenteditable=\"true\"]'); let card = null; for (let el = editor; el !== null && el !== wrapper; el = el.parentElement) { const style = getComputedStyle(el); if (style.backgroundColor !== 'rgba(0, 0, 0, 0)' || style.backgroundImage !== 'none') { card = el; break; } } const send = [...wrapper.querySelectorAll('button')].map((button) => button.getBoundingClientRect()).sort((a, b) => b.right - a.right)[0]; const rect = (element) => { const r = element.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]; }; const base = window.__layout; return JSON.stringify(rect(dock)) === JSON.stringify(base.dock) && JSON.stringify(rect(probe)) === JSON.stringify(base.probe) && Math.round(send.right) === base.sendRight && (card === null ? base.card === null : JSON.stringify(rect(card)) === JSON.stringify(base.card)); })()"
+    },
+    {
+      "eval": "(() => { localStorage.removeItem('dsh-chat-background:strip'); window.dispatchEvent(new StorageEvent('storage', { key: 'dsh-chat-background:strip' })); window.dispatchEvent(new Event('resize')); document.getElementById('fixed-probe')?.remove(); return 'strip on'; })()"
+    },
+    {
+      "wait": 1800
+    },
+    {
+      "check": "strip returns when switched on again",
+      "expr": "document.querySelector('[data-dsh-chat-strip]') !== null"
+    },
+    {
+      "log": "style-only size change: the row grows, the bar must follow"
+    },
+    {
+      "eval": "(() => { const dock = document.querySelector('[data-composer-dock]'); if (dock === null) return 'NO DOCK'; dock.style.setProperty('font-size', '28px', 'important'); dock.style.setProperty('padding', '10px 0', 'important'); return 'grown'; })()"
+    },
+    {
+      "wait": 1200
+    },
+    {
+      "check": "bar follows a style-only height change",
+      "expr": "(() => { const strip = document.querySelector('[data-dsh-chat-strip]'); if (strip === null) return false; const union = window.__pillUnion(); if (union === null) return false; const rect = strip.getBoundingClientRect(); return union.height > 30 && rect.top <= union.top + 2 && rect.bottom >= union.bottom - 2 && rect.height >= union.height - 1; })()"
+    },
+    {
+      "log": "removing the pills hides the bar; adding them back restores it"
+    },
+    {
+      "eval": "String(window.__removePills())"
+    },
+    {
+      "wait": 1800
+    },
+    {
+      "check": "strip disappears without a usage row",
+      "expr": "document.querySelector('[data-dsh-chat-strip]') === null"
+    },
+    {
+      "eval": "String(window.__addPills(['7 turns · 42 steps', 'Cache hit 96.1% · context 51%']))"
+    },
+    {
+      "wait": 1500
+    },
+    {
+      "check": "strip returns with the usage row",
+      "expr": "document.querySelector('[data-dsh-chat-strip]') !== null"
+    },
+    {
+      "log": "open settings and toggle switches repeatedly"
+    },
+    {
+      "click": "[aria-label=\"账号菜单\"]"
+    },
+    {
+      "wait": 800
+    },
+    {
+      "clickText": "设置",
+      "tag": "button"
+    },
+    {
+      "wait": 2500
+    },
+    {
+      "clickText": "页面设置",
+      "tag": "button"
+    },
+    {
+      "wait": 1500
+    },
+    {
+      "clickText": "UI"
+    },
+    {
+      "wait": 800
+    },
+    {
+      "eval": "(async () => { const row = (title) => [...document.querySelectorAll('.dshcb-section .dshcb-row')].find((item) => item.querySelector('.dshcb-title').innerText.trim() === title); const click = async (title, times) => { const target = row(title); if (target === undefined) return 'missing ' + title; for (let index = 0; index < times; index += 1) { target.querySelector('.dshcb-switch').click(); await new Promise((resolve) => setTimeout(resolve, 220)); } return 'toggled ' + title; }; const results = [await click('输入栏下方背景条', 4), await click('Token 总用量', 4), await click('任务进度条', 4)]; return results.join(' | '); })()"
+    },
+    {
+      "wait": 1500
+    },
+    {
+      "eval": "JSON.stringify({ strip: document.querySelectorAll('[data-dsh-chat-strip]').length, token: document.querySelectorAll('[data-dsh-token-total]').length, progress: document.querySelectorAll('.dshcb-progress-row').length, stripStored: localStorage.getItem('dsh-chat-background:strip'), tokenStored: localStorage.getItem('dsh-chat-background:token'), progressStored: localStorage.getItem('dsh-chat-background:progress'), composer: document.querySelector('[data-slot=\"conversation.composer.bar\"]') !== null, union: window.__pillUnion() })"
+    },
+    {
+      "check": "repeated toggles never duplicate injected nodes",
+      "expr": "(() => { const counts = { strip: document.querySelectorAll('[data-dsh-chat-strip]').length, token: document.querySelectorAll('[data-dsh-token-total]').length, progress: document.querySelectorAll('.dshcb-progress-row').length }; return counts.strip === 1 && counts.token === 1 && counts.progress === 0; })()"
+    },
+    {
+      "log": "window resize re-measures without breaking geometry"
+    },
+    {
+      "eval": "(() => { window.dispatchEvent(new Event('resize')); return 'resized'; })()"
+    },
+    {
+      "wait": 1000
+    },
+    {
+      "check": "strip still covers the row after a resize",
+      "expr": "(() => { const strip = document.querySelector('[data-dsh-chat-strip]'); const union = window.__pillUnion(); if (strip === null || union === null) return false; const rect = strip.getBoundingClientRect(); return rect.top <= union.top + 2 && rect.bottom >= union.bottom - 2; })()"
+    },
+    {
+      "shot": "03-robustness"
+    }
+  ]
+}

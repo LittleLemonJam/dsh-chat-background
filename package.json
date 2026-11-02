@@ -1,0 +1,90 @@
+{
+  "name": "dsh-chat-background",
+  "version": "1.0.0",
+  "description": "Chat background image, sidebar veil, composer strip, task progress bar and all-session token total for the DeepSeek Harness (DSH) Web GUI.",
+  "meta": {
+    "title": "聊天背景",
+    "description": "背景图、侧栏柔化、输入栏下方背景条、任务进度条与全会话 token 总用量"
+  },
+  "icon": "./icon.svg",
+  "author": "LittleLemonJam",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LittleLemonJam/dsh-chat-background.git"
+  },
+  "homepage": "https://github.com/LittleLemonJam/dsh-chat-background",
+  "bugs": {
+    "url": "https://github.com/LittleLemonJam/dsh-chat-background/issues"
+  },
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "index.js",
+    "host/",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "README.en.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "docs/",
+    "assets/screenshots/"
+  ],
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.1-rc.3"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "cordis",
+    "chat-background",
+    "background",
+    "wallpaper",
+    "theme",
+    "ui"
+  ],
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings-general",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "node scripts/check.mjs",
+    "check:install": "node scripts/check-install.mjs --profile desktop",
+    "test:unit": "node --test \"test/unit/*.test.mjs\"",
+    "test:e2e": "node scripts/e2e/run.mjs",
+    "test": "npm run build && npm run check && npm run test:unit",
+    "verify": "npm run format:check && npm test",
+    "prepack": "npm run build",
+    "cleanup:local": "node scripts/cleanup-local.mjs --profile desktop"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "prettier": "^3.9.10"
+  }
+}

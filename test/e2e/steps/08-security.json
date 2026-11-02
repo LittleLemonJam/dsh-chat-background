@@ -1,0 +1,72 @@
+{
+  "name": "08-security",
+  "allowConsoleErrors": [],
+  "seed": {
+    "dsh-chat-background:selection": "sample-background.png",
+    "dsh-chat-background:scrim-left": "45",
+    "dsh-chat-background:scrim-main": "10",
+    "dsh-chat-background:scrim-right": "45"
+  },
+  "steps": [
+    {
+      "wait": 12000
+    },
+    {
+      "clickText": "继续",
+      "tag": "button"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "clickText": "新会话",
+      "tag": "button"
+    },
+    {
+      "wait": 3000
+    },
+    {
+      "log": "host health route reports version, limits and fence"
+    },
+    {
+      "check": "health route reports ok, version and an enabled fence",
+      "expr": "(async () => { const response = await fetch('/chat-backgrounds/health'); if (!response.ok) return false; const payload = await response.json(); return payload.ok === true && typeof payload.version === 'string' && payload.version.length > 0 && payload.fence === 'on' && payload.limits.maxImageBytes > 0; })()"
+    },
+    {
+      "log": "list never exposes the absolute home path and token data says where it came from"
+    },
+    {
+      "check": "list payload hides the home directory",
+      "expr": "(async () => { const response = await fetch('/chat-backgrounds/list'); const payload = await response.json(); return payload.folder.startsWith('~') && payload.folder.includes('backgrounds') && payload.images.length >= 1; })()"
+    },
+    {
+      "check": "token total reports its data source",
+      "expr": "(async () => { const response = await fetch('/chat-backgrounds/token-total'); const payload = await response.json(); return typeof payload.total === 'number' && typeof payload.source === 'string'; })()"
+    },
+    {
+      "log": "image responses carry security headers and SVG is sandboxed"
+    },
+    {
+      "check": "image responses carry nosniff, CORP and private cache headers",
+      "expr": "(async () => { const response = await fetch('/chat-backgrounds/files/sample-background.png'); return response.ok && response.headers.get('x-content-type-options') === 'nosniff' && response.headers.get('cross-origin-resource-policy') === 'same-origin' && (response.headers.get('cache-control') || '').includes('private'); })()"
+    },
+    {
+      "check": "SVG response carries a sandboxing CSP",
+      "expr": "(async () => { const response = await fetch('/chat-backgrounds/files/probe.svg'); const policy = response.headers.get('content-security-policy') || ''; return response.ok && response.headers.get('content-type') === 'image/svg+xml' && policy.includes('sandbox') && policy.includes(\"default-src 'none'\"); })()"
+    },
+    {
+      "log": "a same-origin top-level SVG navigation must not execute script"
+    },
+    {
+      "navigate": "/chat-backgrounds/files/probe.svg",
+      "waitAfter": 2000
+    },
+    {
+      "check": "sandboxed SVG document did not run its script",
+      "expr": "document.documentElement.getAttribute('data-svg-script-ran') === null && document.title !== 'PWNED'"
+    },
+    {
+      "shot": "08-security-svg"
+    }
+  ]
+}

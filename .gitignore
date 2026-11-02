@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build/test scratch (created by scripts, never committed)
+_scratch/
+_scratch-*.js
+.tmp/
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/

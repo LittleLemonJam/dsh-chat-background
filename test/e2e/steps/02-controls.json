@@ -1,0 +1,272 @@
+{
+  "name": "02-controls",
+  "allowConsoleErrors": [],
+  "seed": {
+    "dsh-chat-background:selection": "sample-background.png",
+    "dsh-chat-background:scrim-left": "45",
+    "dsh-chat-background:scrim-main": "10",
+    "dsh-chat-background:scrim-right": "45"
+  },
+  "steps": [
+    {
+      "wait": 12000
+    },
+    {
+      "clickText": "继续",
+      "tag": "button"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "clickText": "新会话",
+      "tag": "button"
+    },
+    {
+      "wait": 3000
+    },
+    {
+      "eval": "(() => { const wrapper = document.querySelector('[data-slot=\"conversation.composer.bar\"] > *'); const dock = wrapper === null ? null : wrapper.querySelector('[data-composer-dock]'); if (dock === null) return 'NO DOCK'; dock.style.setProperty('display', 'flex', 'important'); dock.style.setProperty('gap', '12px', 'important'); dock.style.setProperty('font-size', '12px', 'important'); for (const label of ['13 轮 498 步 · 276 tok/s', '124M tok · 缓存命中 99.7%']) { const span = document.createElement('span'); span.setAttribute('data-composer-stat', 'usage'); span.textContent = label; dock.appendChild(span); } return 'dock populated'; })()"
+    },
+    {
+      "wait": 1200
+    },
+    {
+      "click": "[aria-label=\"账号菜单\"]"
+    },
+    {
+      "wait": 800
+    },
+    {
+      "clickText": "设置",
+      "tag": "button"
+    },
+    {
+      "wait": 2500
+    },
+    {
+      "clickText": "页面设置",
+      "tag": "button"
+    },
+    {
+      "wait": 1500
+    },
+    {
+      "log": "helpers: find a settings row by its title, click its control"
+    },
+    {
+      "eval": "(() => { window.__dshcbTest = { row(title) { return [...document.querySelectorAll('.dshcb-section .dshcb-row')].find((row) => row.querySelector('.dshcb-title').innerText.trim() === title); }, toggle(title) { const row = this.row(title); if (row === undefined) return 'missing ' + title; row.querySelector('.dshcb-switch').click(); return 'clicked ' + title; }, range(title, value) { const row = this.row(title); if (row === undefined) return 'missing ' + title; const input = row.querySelector('.dshcb-range'); const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; setter.call(input, String(value)); input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); return 'range ' + title + '=' + String(value); }, color(title, value) { const row = this.row(title); if (row === undefined) return 'missing ' + title; const input = row.querySelector('.dshcb-color'); const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; setter.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); return 'color ' + title + '=' + value; }, reset(title) { const row = this.row(title); if (row === undefined) return 'missing ' + title; const button = [...row.querySelectorAll('.dshcb-button')].find((item) => item.innerText.trim() === '恢复默认'); if (button === undefined) return 'no reset ' + title; button.click(); return 'reset ' + title; }, slider(title) { const row = this.row(title); return row === undefined ? null : row.querySelector('.dshcb-range').disabled; } }; return 'helpers ready'; })()"
+    },
+    {
+      "clickText": "UI"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "log": "switches: strip, progress and token lines appear and disappear"
+    },
+    {
+      "eval": "window.__dshcbTest.toggle('输入栏下方背景条')"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "check": "strip switch off removes the bar",
+      "expr": "document.querySelector('[data-dsh-chat-strip]') === null"
+    },
+    {
+      "eval": "window.__dshcbTest.toggle('输入栏下方背景条')"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "check": "strip switch on brings the bar back",
+      "expr": "document.querySelector('[data-dsh-chat-strip]') !== null"
+    },
+    {
+      "eval": "window.__dshcbTest.toggle('任务进度条')"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "check": "progress switch off stores off and the idle bar stays hidden",
+      "expr": "window.localStorage.getItem('dsh-chat-background:progress') === 'off' && document.querySelector('.dshcb-progress-row') === null"
+    },
+    {
+      "eval": "window.__dshcbTest.toggle('任务进度条')"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "check": "progress switch on restores the default state without an idle row",
+      "expr": "window.localStorage.getItem('dsh-chat-background:progress') === null && document.querySelector('.dshcb-progress-row') === null && window.__dshcb.diagnostics().progress?.enabled === true"
+    },
+    {
+      "eval": "window.__dshcbTest.toggle('Token 总用量')"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "check": "token switch off removes the line",
+      "expr": "document.querySelector('[data-dsh-token-total]') === null"
+    },
+    {
+      "eval": "window.__dshcbTest.toggle('Token 总用量')"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "check": "token switch on brings the line back",
+      "expr": "document.querySelector('[data-dsh-token-total]') !== null"
+    },
+    {
+      "clickText": "背景"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "log": "sliders: 0–100 per-region scrim values and CSS variables"
+    },
+    {
+      "eval": "window.__dshcbTest.range('左侧栏遮罩层', 100); window.__dshcbTest.range('主窗口遮罩层', 0); window.__dshcbTest.range('右侧栏遮罩层', 55)"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "check": "region sliders store 0–100 values and publish independent CSS variables",
+      "expr": "(() => { const root = document.documentElement.style; const left = window.localStorage.getItem('dsh-chat-background:scrim-left'); const main = window.localStorage.getItem('dsh-chat-background:scrim-main'); const right = window.localStorage.getItem('dsh-chat-background:scrim-right'); return left === '100' && main === '0' && right === '55' && root.getPropertyValue('--dsh-chat-background-scrim-left').includes('1.000') && root.getPropertyValue('--dsh-chat-background-scrim-main').includes('0.000') && root.getPropertyValue('--dsh-chat-background-scrim-right').includes('0.550'); })()"
+    },
+    {
+      "check": "each region paints its own scrim pseudo-element at the configured opacity",
+      "expr": "(() => {\n  const column = (slot) => {\n    const outlet = document.querySelector('[data-slot=\"' + slot + '\"]')\n    return outlet === null ? null : outlet.parentElement\n  }\n  const left = column('sidebar')\n  const main = column('main')\n  const right = column('rightbar')\n  if (left === null || main === null || right === null) return 'MISSING COLUMN'\n  const leftBg = getComputedStyle(left, '::before').backgroundImage\n  const mainBg = getComputedStyle(main, '::after').backgroundImage\n  const rightBg = getComputedStyle(right, '::after').backgroundImage\n  return leftBg.includes('rgb(250, 250, 250)') && mainBg.includes('250, 250, 250, 0') && rightBg.includes('0.55')\n})()"
+    },
+    {
+      "clickText": "UI"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "eval": "window.__dshcbTest.range('Token 字号', 17)"
+    },
+    {
+      "wait": 500
+    },
+    {
+      "check": "token font slider publishes its custom property",
+      "expr": "document.documentElement.style.getPropertyValue('--dsh-token-size') === '17px'"
+    },
+    {
+      "log": "colour wells"
+    },
+    {
+      "eval": "window.__dshcbTest.color('背景条颜色', '#3366ff'); window.__dshcbTest.color('进度条颜色', '#ff6600')"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "check": "colour wells store hex values and paint the controls",
+      "expr": "(() => { const strip = document.querySelector('[data-dsh-chat-strip]'); return window.localStorage.getItem('dsh-chat-background:strip-color') === '#3366ff' && window.localStorage.getItem('dsh-chat-background:progress-color') === '#ff6600' && document.documentElement.style.getPropertyValue('--dsh-chat-strip-bg') === '#3366ffeb' && document.documentElement.style.getPropertyValue('--dsh-progress-color') === '#ff6600' && strip !== null && getComputedStyle(strip).backgroundColor === 'rgba(51, 102, 255, 0.92)'; })()"
+    },
+    {
+      "log": "dark theme default bar colour (BG-01)"
+    },
+    {
+      "eval": "window.__dshcbTest.reset('背景条颜色')"
+    },
+    {
+      "wait": 500
+    },
+    {
+      "eval": "(() => { document.body.setAttribute('data-ds-dark-theme', ''); window.dispatchEvent(new Event('resize')); return 'dark'; })()"
+    },
+    {
+      "wait": 800
+    },
+    {
+      "check": "active tab text stays readable in the dark theme",
+      "expr": "(() => { const tab = document.querySelector('.dshcb-tab-active'); if (tab === null) return false; const style = getComputedStyle(tab); const rgb = (value) => (value.match(/[0-9.]+/g) ?? []).slice(0, 3).map(Number); const background = rgb(style.backgroundColor); const text = rgb(style.color); if (background.length < 3 || text.length < 3) return false; const luminance = ([r, g, b]) => { const channel = (value) => { const v = value / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b); }; const high = Math.max(luminance(background), luminance(text)); const low = Math.min(luminance(background), luminance(text)); return (high + 0.05) / (low + 0.05) > 2.5; })()"
+    },
+    {
+      "check": "dark theme paints the default dark bar colour",
+      "expr": "(() => { const strip = document.querySelector('[data-dsh-chat-strip]'); if (strip === null) return false; return getComputedStyle(strip).backgroundColor === 'rgba(38, 41, 48, 0.92)'; })()"
+    },
+    {
+      "eval": "(() => { document.body.removeAttribute('data-ds-dark-theme'); window.dispatchEvent(new Event('resize')); return 'light'; })()"
+    },
+    {
+      "wait": 800
+    },
+    {
+      "check": "light theme restores the default light bar colour",
+      "expr": "(() => { const strip = document.querySelector('[data-dsh-chat-strip]'); if (strip === null) return false; return getComputedStyle(strip).backgroundColor === 'rgba(242, 243, 245, 0.92)'; })()"
+    },
+    {
+      "log": "locale: switch the app language and read the rows back"
+    },
+    {
+      "clickText": "通用设置",
+      "tag": "button"
+    },
+    {
+      "wait": 1200
+    },
+    {
+      "clickText": "中文",
+      "tag": "button"
+    },
+    {
+      "wait": 800
+    },
+    {
+      "clickText": "English",
+      "tag": "button"
+    },
+    {
+      "wait": 1500
+    },
+    {
+      "clickText": "Page settings",
+      "tag": "button"
+    },
+    {
+      "clickText": "UI"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "wait": 1200
+    },
+    {
+      "check": "English titles render after the app language switch",
+      "expr": "(() => { const lang = document.documentElement.lang; const titles = [...document.querySelectorAll('.dshcb-section .dshcb-row .dshcb-title')].map((el) => el.innerText.trim()); return lang === 'en' && titles[0] === 'Bar under the input' && titles[2] === 'Task progress bar'; })()"
+    },
+    {
+      "eval": "(() => { const target = [...document.querySelectorAll('button')].find((button) => ['General settings', 'General', '通用设置'].includes(button.innerText.trim())); target?.click(); return target === undefined ? 'no general' : 'general'; })()"
+    },
+    {
+      "wait": 1000
+    },
+    {
+      "clickText": "中文",
+      "tag": "button"
+    },
+    {
+      "wait": 1200
+    },
+    {
+      "shot": "02-controls"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="dsh-chat-background icon">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7aa9ff"/>
+      <stop offset="1" stop-color="#3e6fe0"/>
+    </linearGradient>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e8f0ff"/>
+    </linearGradient>
+    <clipPath id="photo">
+      <rect x="52" y="44" width="152" height="118" rx="18"/>
+    </clipPath>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#tile)"/>
+  <rect x="52" y="44" width="152" height="118" rx="18" fill="url(#sky)"/>
+  <g clip-path="url(#photo)">
+    <circle cx="166" cy="80" r="14" fill="#ffd166"/>
+    <path d="M52 150 L104 96 L134 128 L156 108 L204 150 L204 162 L52 162 Z" fill="#8faee4"/>
+    <path d="M52 158 L92 120 L122 150 L146 132 L204 162 L204 162 L52 162 Z" fill="#5f84c9"/>
+  </g>
+  <rect x="96" y="138" width="112" height="62" rx="20" fill="#ffffff" opacity="0.97"/>
+  <path d="M118 198 L110 216 L138 200 Z" fill="#ffffff" opacity="0.97"/>
+  <circle cx="133" cy="169" r="6" fill="#3e6fe0"/>
+  <circle cx="152" cy="169" r="6" fill="#3e6fe0"/>
+  <circle cx="171" cy="169" r="6" fill="#3e6fe0"/>
+</svg>

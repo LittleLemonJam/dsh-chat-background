@@ -1,0 +1,18 @@
+# 构建产物与依赖目录由工具生成/管理，不做 Prettier 检查。
+node_modules/
+_scratch/
+.tmp/
+coverage/
+*.log
+
+# 第三方快照与截图：保持原样，避免无意义的格式化 diff。
+assets/screenshots/
+
+# 构建产物：由 esbuild 生成，格式不随 Prettier 变化。
+client.js
+
+# 锁文件由 npm 维护。
+package-lock.json
+
+# 第三方/手写矢量资源不做 Prettier 解析。
+*.svg

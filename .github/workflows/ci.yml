@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.os }} / Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            node: 22
+          - os: ubuntu-latest
+            node: 24
+          # Windows is the primary target (the plugin's host half opens the
+          # folder with explorer.exe), so at least one Windows run is required.
+          - os: windows-latest
+            node: 24
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Build browser bundle
+        run: npm run build
+
+      - name: Committed client.js matches the build
+        run: git diff --exit-code -- client.js
+
+      - name: Static checks
+        run: npm run check
+
+      - name: Unit tests
+        run: npm run test:unit
+
+  # The end-to-end suite needs a local DSH installation and a Chromium browser,
+  # which hosted runners do not provide. Run it locally with `npm run test:e2e`;
+  # see docs/TESTING.md for the prerequisites.

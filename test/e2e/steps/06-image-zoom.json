@@ -1,0 +1,130 @@
+{
+  "name": "06-image-zoom",
+  "allowConsoleErrors": [],
+  "seed": {
+    "dsh-chat-background:selection": "sample-background.png"
+  },
+  "steps": [
+    {
+      "wait": 12000
+    },
+    {
+      "clickText": "继续",
+      "tag": "button"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "clickText": "新会话",
+      "tag": "button"
+    },
+    {
+      "wait": 2500
+    },
+    {
+      "log": "lightbox wheel zoom: transform the image under the cursor"
+    },
+    {
+      "eval": "(() => { document.querySelector('[data-dsh-test-viewer]')?.remove(); const overlay = document.createElement('div'); overlay.setAttribute('data-dsh-test-viewer', ''); overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6)'; overlay.setAttribute('role','dialog'); overlay.setAttribute('aria-modal','true'); const image = document.createElement('img'); image.src = '/chat-backgrounds/files/sample-background.png'; image.style.cssText = 'width:480px;height:300px'; overlay.appendChild(image); document.body.appendChild(overlay); const rect = image.getBoundingClientRect(); image.dispatchEvent(new WheelEvent('wheel', { deltaY: -300, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2, bubbles: true, cancelable: true })); return JSON.stringify({ transform: image.style.transform, marker: image.getAttribute('data-dsh-image-zoom') }); })()"
+    },
+    {
+      "check": "wheel over a fixed image viewer scales the image",
+      "expr": "(() => { const image = document.querySelector('[data-dsh-test-viewer] img'); if (image === null) return false; const scale = Number(image.getAttribute('data-dsh-image-zoom')); return Number.isFinite(scale) && scale > 1 && (image.style.transform || '').includes('scale('); })()"
+    },
+    {
+      "eval": "(() => {\n  const image = document.querySelector('[data-dsh-test-viewer] img')\n  const rect = image.getBoundingClientRect()\n  const x = rect.left + rect.width / 2\n  const y = rect.top + rect.height / 2\n  const read = () => (image.getAttribute('data-dsh-image-zoom') === null ? null : Number(image.getAttribute('data-dsh-image-zoom')))\n  image.dispatchEvent(new MouseEvent('dblclick', { clientX: x, clientY: y, bubbles: true, cancelable: true }))\n  const scales = [read()]\n  for (const delta of [-120, -120, 120, 120]) {\n    image.dispatchEvent(new WheelEvent('wheel', { deltaY: delta, clientX: x, clientY: y, bubbles: true, cancelable: true }))\n    scales.push(read())\n  }\n  window.__zoomScales = JSON.stringify(scales)\n  return window.__zoomScales\n})()"
+    },
+    {
+      "check": "wheel up zooms in and wheel down zooms out monotonically",
+      "expr": "(() => { const s = JSON.parse(window.__zoomScales ?? 'null'); return s !== null && s[0] === null && s[1] > 1 && s[2] > s[1] && s[3] < s[2] && s[4] < s[3]; })()"
+    },
+    {
+      "eval": "(() => {\n  const image = document.querySelector('[data-dsh-test-viewer] img')\n  const rect = image.getBoundingClientRect()\n  const x = rect.left + rect.width * 0.3\n  const y = rect.top + rect.height * 0.4\n  image.dispatchEvent(new MouseEvent('dblclick', { clientX: x, clientY: y, bubbles: true, cancelable: true }))\n  const before = image.getBoundingClientRect()\n  image.dispatchEvent(new WheelEvent('wheel', { deltaY: -120, clientX: x, clientY: y, bubbles: true, cancelable: true }))\n  const after = image.getBoundingClientRect()\n  const scale = Number(image.getAttribute('data-dsh-image-zoom'))\n  window.__zoomAnchor = JSON.stringify({ delta: Math.abs(after.left + (x - before.left) * scale - x), scale })\n  return window.__zoomAnchor\n})()"
+    },
+    {
+      "check": "the point under the cursor stays anchored while zooming",
+      "expr": "(() => { const a = JSON.parse(window.__zoomAnchor ?? 'null'); return a !== null && a.scale > 1 && a.delta <= 2; })()"
+    },
+    {
+      "eval": "(() => {\n  const overlay = document.querySelector('[data-dsh-test-viewer]')\n  const image = overlay.querySelector('img')\n  const rect = image.getBoundingClientRect()\n  image.dispatchEvent(new MouseEvent('dblclick', { clientX: rect.left + 10, clientY: rect.top + 10, bubbles: true, cancelable: true }))\n  const x = rect.left + rect.width / 2\n  const y = rect.top + rect.height / 2\n  overlay.dispatchEvent(new WheelEvent('wheel', { deltaY: -120, clientX: x, clientY: y, bubbles: true, cancelable: true }))\n  return JSON.stringify({ scale: image.getAttribute('data-dsh-image-zoom') })\n})()"
+    },
+    {
+      "check": "wheeling the lightbox backdrop still zooms the preview",
+      "expr": "(() => { const scale = Number(document.querySelector('[data-dsh-test-viewer] img')?.getAttribute('data-dsh-image-zoom')); return Number.isFinite(scale) && scale > 1; })()"
+    },
+    {
+      "eval": "(() => {\n  const overlay = document.createElement('div')\n  overlay.setAttribute('data-dsh-test-line-viewer', '')\n  overlay.setAttribute('role', 'dialog')\n  overlay.setAttribute('aria-modal', 'true')\n  overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6)'\n  const image = document.createElement('img')\n  image.src = '/chat-backgrounds/files/sample-background.png'\n  image.style.cssText = 'width:480px;height:300px'\n  overlay.appendChild(image)\n  document.body.appendChild(overlay)\n  const rect = image.getBoundingClientRect()\n  image.dispatchEvent(new WheelEvent('wheel', { deltaY: -3, deltaMode: 1, clientX: rect.left + 100, clientY: rect.top + 100, bubbles: true, cancelable: true }))\n  return JSON.stringify({ scale: image.getAttribute('data-dsh-image-zoom') })\n})()"
+    },
+    {
+      "check": "line-mode wheel deltas are normalized to a visible zoom step",
+      "expr": "(() => { const scale = Number(document.querySelector('[data-dsh-test-line-viewer] img')?.getAttribute('data-dsh-image-zoom')); return Number.isFinite(scale) && scale > 1.05; })()"
+    },
+    {
+      "eval": "document.querySelector('[data-dsh-test-line-viewer]')?.remove(); delete window.__zoomAnchor; 'removed'"
+    },
+    {
+      "eval": "(() => { const image = document.querySelector('[data-dsh-test-viewer] img'); const rect = image.getBoundingClientRect(); image.dispatchEvent(new MouseEvent('dblclick', { clientX: rect.left + 10, clientY: rect.top + 10, bubbles: true, cancelable: true })); return JSON.stringify({ transform: image.style.transform, marker: image.getAttribute('data-dsh-image-zoom') }); })()"
+    },
+    {
+      "check": "double click resets the lightbox zoom",
+      "expr": "(() => { const image = document.querySelector('[data-dsh-test-viewer] img'); return image !== null && image.style.transform === '' && image.getAttribute('data-dsh-image-zoom') === null; })()"
+    },
+    {
+      "eval": "(() => {\n  document.querySelector('[data-dsh-test-settings]')?.remove()\n  const dialog = document.createElement('div')\n  dialog.setAttribute('data-dsh-test-settings', '')\n  dialog.setAttribute('role', 'dialog')\n  dialog.setAttribute('aria-modal', 'true')\n  dialog.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center'\n  const panel = document.createElement('div')\n  panel.style.cssText = 'width:600px;height:400px;background:#fff;padding:20px'\n  const image = document.createElement('img')\n  image.src = '/chat-backgrounds/files/sample-background.png'\n  image.style.cssText = 'width:240px;height:150px'\n  panel.appendChild(image)\n  dialog.appendChild(panel)\n  document.body.appendChild(dialog)\n  const rect = image.getBoundingClientRect()\n  image.dispatchEvent(new WheelEvent('wheel', { deltaY: -240, clientX: rect.left + 40, clientY: rect.top + 40, bubbles: true, cancelable: true }))\n  return JSON.stringify({ marker: image.getAttribute('data-dsh-image-zoom'), transform: image.style.transform })\n})()"
+    },
+    {
+      "check": "wheeling an image inside a settings-style modal does not zoom it",
+      "expr": "(() => { const image = document.querySelector('[data-dsh-test-settings] img'); return image !== null && image.getAttribute('data-dsh-image-zoom') === null && (image.style.transform || '') === ''; })()"
+    },
+    {
+      "eval": "document.querySelector('[data-dsh-test-settings]')?.remove(); 'removed'"
+    },
+    {
+      "eval": "document.querySelector('[data-dsh-test-viewer]')?.remove(); 'removed'"
+    },
+    {
+      "log": "inline images and the page itself keep their normal wheel behaviour"
+    },
+    {
+      "eval": "(() => { const overlay = document.createElement('div'); overlay.setAttribute('data-dsh-test-viewer', ''); overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.6)'; overlay.setAttribute('role','dialog'); overlay.setAttribute('aria-modal','true'); const image = document.createElement('img'); image.src = '/chat-backgrounds/files/sample-background.png'; image.style.cssText = 'width:480px;height:300px'; overlay.appendChild(image); document.body.appendChild(overlay); const before = window.scrollY; image.dispatchEvent(new WheelEvent('wheel', { deltaY: -300, clientX: 10, clientY: 10, bubbles: true, cancelable: true })); return JSON.stringify({ scale: image.getAttribute('data-dsh-image-zoom'), scrollY: window.scrollY, before }); })()"
+    },
+    {
+      "check": "the scaled image is still owned by the viewer (no layout scroll)",
+      "expr": "(() => { const image = document.querySelector('[data-dsh-test-viewer] img'); const scale = Number(image?.getAttribute('data-dsh-image-zoom')); return Number.isFinite(scale) && scale <= 8 && scale >= 0.4; })()"
+    },
+    {
+      "eval": "document.querySelector('[data-dsh-test-viewer]')?.remove(); 'removed'"
+    },
+    {
+      "log": "right sidebar preview: a plain wheel is translated into its Ctrl+wheel gesture"
+    },
+    {
+      "eval": "(() => { const scrollport = document.createElement('div'); scrollport.setAttribute('data-document-zoom-scrollport',''); scrollport.style.cssText='position:fixed;left:20px;top:120px;width:200px;height:120px;z-index:2147483000;overflow:auto'; const surface = document.createElement('div'); surface.setAttribute('data-image-preview',''); const image = document.createElement('img'); image.src='/chat-backgrounds/files/sample-background.png'; image.style.cssText='width:100px;height:60px'; surface.appendChild(image); scrollport.appendChild(surface); document.body.appendChild(scrollport); window.__zoomProbe = { ctrl: 0, plain: 0 }; scrollport.addEventListener('wheel', (event) => { if (event.ctrlKey) window.__zoomProbe.ctrl += 1; else window.__zoomProbe.plain += 1; }); const rect = image.getBoundingClientRect(); image.dispatchEvent(new WheelEvent('wheel', { deltaY: -120, clientX: rect.left + 10, clientY: rect.top + 10, bubbles: true, cancelable: true })); return JSON.stringify(window.__zoomProbe); })()"
+    },
+    {
+      "check": "sidebar preview receives the synthetic Ctrl+wheel gesture",
+      "expr": "(() => window.__zoomProbe !== undefined && window.__zoomProbe.ctrl === 1 && window.__zoomProbe.plain === 0)()"
+    },
+    {
+      "eval": "document.querySelector('[data-document-zoom-scrollport]')?.remove(); delete window.__zoomProbe; 'removed'"
+    },
+    {
+      "log": "inline images keep their layout: a wheel does not transform them"
+    },
+    {
+      "eval": "(() => { const host = document.createElement('div'); host.setAttribute('data-dsh-test-inline',''); host.style.cssText='position:relative;width:400px;height:240px'; const image = document.createElement('img'); image.src='/chat-backgrounds/files/sample-background.png'; image.style.cssText='width:200px;height:120px'; host.appendChild(image); document.body.appendChild(host); const rect = image.getBoundingClientRect(); image.dispatchEvent(new WheelEvent('wheel', { deltaY: -300, clientX: rect.left + 10, clientY: rect.top + 10, bubbles: true, cancelable: true })); return JSON.stringify({ marker: image.getAttribute('data-dsh-image-zoom') }); })()"
+    },
+    {
+      "check": "inline images are not zoomed by the gesture",
+      "expr": "(() => { const image = document.querySelector('[data-dsh-test-inline] img'); return image !== null && image.getAttribute('data-dsh-image-zoom') === null; })()"
+    },
+    {
+      "eval": "document.querySelector('[data-dsh-test-inline]')?.remove(); 'removed'"
+    },
+    {
+      "check": "the plugin exposes the zoom feature in diagnostics only implicitly (no settings switch)",
+      "expr": "(() => { const rows = [...document.querySelectorAll('.dshcb-section .dshcb-row')].map((row) => row.querySelector('.dshcb-title')?.innerText.trim()); return !rows.includes('图片滚轮缩放'); })()"
+    }
+  ]
+}

@@ -1,0 +1,152 @@
+{
+  "name": "07-rotation",
+  "allowConsoleErrors": [],
+  "seed": {
+    "dsh-chat-background:selection": "sample-background.png",
+    "dsh-chat-background:mode": "rotation",
+    "dsh-chat-background:rotation-interval": "5",
+    "dsh-chat-background:rotation-duration": "2",
+    "dsh-chat-background:rotation-effect": "fade",
+    "dsh-chat-background:rotation-group": "[\"sample-background-2.png\",\"sample-background-3.png\"]",
+    "dsh-chat-background:scrim-left": "45",
+    "dsh-chat-background:scrim-main": "10",
+    "dsh-chat-background:scrim-right": "45"
+  },
+  "steps": [
+    {
+      "eval": "(() => { window.location.reload(); return 'reload'; })()"
+    },
+    {
+      "wait": 12000
+    },
+    {
+      "eval": "(() => { const exit=[...document.querySelectorAll('button[aria-label]')].find((b)=>/退出全屏|exit fullscreen/i.test(b.getAttribute('aria-label'))); exit?.click(); const collapse=[...document.querySelectorAll('button[aria-label]')].find((b)=>/收起右侧边栏|collapse right sidebar/i.test(b.getAttribute('aria-label'))); collapse?.click(); return exit===undefined && collapse===undefined ? 'already normal' : 'normalized'; })()"
+    },
+    {
+      "wait": 1500
+    },
+    {
+      "wait": 12000
+    },
+    {
+      "eval": "(() => { const dismiss = [...document.querySelectorAll('button')].find((button) => ['继续', 'Continue'].includes(button.innerText.trim())); dismiss?.click(); return dismiss === undefined ? 'no dismiss' : 'dismissed'; })()"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "eval": "(() => { const create = [...document.querySelectorAll('button')].find((button) => ['新会话', 'New Session'].includes(button.innerText.trim())); create?.click(); return create === undefined ? 'no session button' : 'session'; })()"
+    },
+    {
+      "wait": 2000
+    },
+    {
+      "eval": "(() => { const close = document.querySelector('[role=\"dialog\"] [aria-label=\"关闭\"], [role=\"dialog\"] [aria-label=\"Close\"]'); close?.click(); return close === null ? 'no dialog' : 'closed'; })()"
+    },
+    {
+      "wait": 1200
+    },
+    {
+      "eval": "(async () => { const seen = []; let layerSeen = false; const observer = new MutationObserver(() => { if (document.querySelector('[data-dsh-chat-background-rotate-layer]')) layerSeen = true; }); observer.observe(document.body, { childList: true, subtree: true }); const start = Date.now(); while (Date.now() - start < 7000) { const name = localStorage.getItem('dsh-chat-background:selection'); if (seen.at(-1) !== name) seen.push(name); if (document.querySelector('[data-dsh-chat-background-rotate-layer]')) layerSeen = true; await new Promise((resolve) => setTimeout(resolve, 45)); } observer.disconnect(); window.__rotationLog = { seen, layerSeen, image: document.documentElement.style.getPropertyValue('--dsh-chat-background-image') }; return JSON.stringify(window.__rotationLog); })()"
+    },
+    {
+      "eval": "(() => { const row=[...document.querySelectorAll('.dshcb-row')].find((e)=>e.querySelector('.dshcb-title')?.innerText.trim()==='轮换设置'); const ranges=[...(row?.querySelectorAll('input[type=\"range\"]')??[])]; return JSON.stringify({ storage:{duration:localStorage.getItem('dsh-chat-background:rotation-duration'),interval:localStorage.getItem('dsh-chat-background:rotation-interval'),effect:localStorage.getItem('dsh-chat-background:rotation-effect')}, ranges:ranges.map((r)=>({value:r.value,min:r.min,max:r.max,step:r.step})) }); })()"
+    },
+    {
+      "check": "rotation cycles through the selected group and uses the fade layer",
+      "expr": "(() => { const log = window.__rotationLog ?? null; if (log === null) return false; const allowed = ['sample-background-2.png', 'sample-background-3.png']; const unique = [...new Set(log.seen)]; return log.layerSeen === true && unique.length >= 2 && unique.every((name) => allowed.includes(name)) && allowed.some((name) => log.image.includes(name)); })()"
+    },
+    {
+      "eval": "(() => { const menu = [...document.querySelectorAll('button[aria-label]')].find((button) => /账号菜单|account menu/i.test(button.getAttribute('aria-label'))); menu?.click(); return menu === undefined ? 'no account menu' : 'menu'; })()"
+    },
+    {
+      "wait": 800
+    },
+    {
+      "eval": "(() => { const target = [...document.querySelectorAll('button')].find((button) => (button.innerText.includes('设置') && !button.innerText.includes('页面')) || button.innerText.includes('Settings') && !button.innerText.includes('Page')); target?.click(); return target === undefined ? 'no settings' : 'settings'; })()"
+    },
+    {
+      "wait": 2500
+    },
+    {
+      "eval": "(() => { const target = [...document.querySelectorAll('button')].find((button) => ['页面设置', 'Page settings'].includes(button.innerText.trim())); target?.click(); return target === undefined ? 'no page settings' : 'page'; })()"
+    },
+    {
+      "wait": 1500
+    },
+    {
+      "check": "rotation rows sit under the image picker in the requested order",
+      "expr": "(() => {\n  const titles = [...document.querySelectorAll('.dshcb-section .dshcb-tab-panel .dshcb-row .dshcb-title')].map((el) => el.innerText.trim())\n  const zh = ['背景显示方式', '轮换设置', '轮换分组', '左侧栏遮罩层', '主窗口遮罩层', '右侧栏遮罩层']\n  const en = ['Background display', 'Rotation settings', 'Rotation group', 'Left sidebar scrim layer', 'Main window scrim layer', 'Right sidebar scrim layer']\n  const same = (expected) => titles.length === expected.length && expected.every((title, index) => titles[index] === title)\n  return same(zh) || same(en)\n})()"
+    },
+    {
+      "shot": "07-rotation-settings"
+    },
+    {
+      "check": "stored rotation settings are reflected by the controls",
+      "expr": "(() => { const rows = [...document.querySelectorAll('.dshcb-row')]; const row = rows.find((entry) => ['背景显示方式', 'Background display'].includes(entry.querySelector('.dshcb-title')?.innerText.trim())); const select = row?.querySelector('select'); const rotations = rows.find((entry) => ['轮换设置', 'Rotation settings'].includes(entry.querySelector('.dshcb-title')?.innerText.trim())); const ranges = rotations?.querySelectorAll('input[type=\"range\"]') ?? []; return select?.value === 'rotation' && ranges.length === 2 && ranges[0].value === '2' && ranges[1].value === '5'; })()"
+    },
+    {
+      "check": "the three rotation rows have no explanatory description",
+      "expr": "(() => {\n  const rows = [...document.querySelectorAll('.dshcb-row')]\n  const titles = ['背景显示方式', '轮换设置', '轮换分组', 'Background display', 'Rotation settings', 'Rotation group']\n  const found = rows.filter((row) => titles.includes(row.querySelector('.dshcb-title')?.innerText.trim()))\n  return found.length === 3 && found.every((row) => row.querySelector('.dshcb-desc') === null)\n})()"
+    },
+    {
+      "check": "the group list shows at most five rows and scrolls",
+      "expr": "(() => {\n  const list = document.querySelector('.dshcb-group-list')\n  const items = [...(list?.querySelectorAll('.dshcb-group-item') ?? [])]\n  if (list === null || items.length < 7) return false\n  return list.clientHeight <= 132 && list.scrollHeight > list.clientHeight && getComputedStyle(list).overflowY === 'auto'\n})()"
+    },
+    {
+      "eval": "(() => {\n  const name = 'sample-background-4.png'\n  const rows = [...document.querySelectorAll('.dshcb-group-item')]\n  const row = rows.find((item) => item.querySelector('.dshcb-group-name')?.innerText.trim() === name)\n  const before = rows.map((item) => item.getAttribute('data-name'))\n  row.querySelector('.dshcb-group-name').click()\n  const stored = JSON.parse(localStorage.getItem('dsh-chat-background:rotation-group') ?? '[]')\n  const after = [...document.querySelectorAll('.dshcb-group-item')].map((item) => item.getAttribute('data-name'))\n  window.__groupBefore = before\n  return JSON.stringify({ stored, checked: row.querySelector('input')?.checked, before, after })\n})()"
+    },
+    {
+      "check": "clicking a filename does not select the image",
+      "expr": "(() => {\n  const stored = JSON.parse(localStorage.getItem('dsh-chat-background:rotation-group') ?? '[]')\n  const row = [...document.querySelectorAll('.dshcb-group-item')].find((item) => item.querySelector('.dshcb-group-name')?.innerText.trim() === 'sample-background-4.png')\n  const before = window.__groupBefore ?? null\n  return !stored.includes('sample-background-4.png') && row?.querySelector('input')?.checked === false\n})()"
+    },
+    {
+      "eval": "(() => {\n  const name = 'sample-background-4.png'\n  const rows = [...document.querySelectorAll('.dshcb-group-item')]\n  const row = rows.find((item) => item.querySelector('.dshcb-group-name')?.innerText.trim() === name)\n  const before = rows.map((item) => item.getAttribute('data-name'))\n  row.querySelector('input').click()\n  const stored = JSON.parse(localStorage.getItem('dsh-chat-background:rotation-group') ?? '[]')\n  const after = [...document.querySelectorAll('.dshcb-group-item')].map((item) => item.getAttribute('data-name'))\n  return JSON.stringify({ stored, checked: row.querySelector('input')?.checked, before, after })\n})()"
+    },
+    {
+      "check": "selecting via the checkbox does not reorder the group list",
+      "expr": "(() => {\n  const stored = JSON.parse(localStorage.getItem('dsh-chat-background:rotation-group') ?? '[]')\n  const row = [...document.querySelectorAll('.dshcb-group-item')].find((item) => item.querySelector('.dshcb-group-name')?.innerText.trim() === 'sample-background-4.png')\n  const before = window.__groupBefore ?? null\n  const after = [...document.querySelectorAll(\".dshcb-group-item\")].map((item) => item.getAttribute(\"data-name\"))\n  return stored.includes('sample-background-4.png') && row?.querySelector('input')?.checked === true && before !== null && JSON.stringify(before) === JSON.stringify(after)\n})()"
+    },
+    {
+      "check": "every group row has a thumbnail between checkbox and filename",
+      "expr": "(() => {\n  const items = [...document.querySelectorAll('.dshcb-group-item')]\n  if (items.length < 7) return false\n  return items.every((item) => {\n    const children = [...item.children]\n    const checkbox = children.find((child) => child.tagName === 'INPUT')\n    const thumb = children.find((child) => child.tagName === 'IMG')\n    const name = children.find((child) => child.classList.contains('dshcb-group-name'))\n    const checkedIndex = children.indexOf(checkbox)\n    const thumbIndex = children.indexOf(thumb)\n    const nameIndex = children.indexOf(name)\n    return checkbox !== undefined && thumb !== undefined && name !== undefined && checkedIndex < thumbIndex && thumbIndex < nameIndex && thumb.getAttribute('src').includes('/chat-backgrounds/files/')\n  })\n})()"
+    },
+    {
+      "eval": "(() => { window.__groupAnimations = 0; const original = Element.prototype.animate; Element.prototype.animate = function (...args) { window.__groupAnimations += 1; return original.apply(this, args) }; return 'probe'; })()"
+    },
+    {
+      "eval": "(async () => {\n  const item = (name) => [...document.querySelectorAll('.dshcb-group-item')].find((row) => row.querySelector('.dshcb-group-name')?.innerText.trim() === name)\n  const from = item('sample-background-2.png')\n  const to = item('sample-background-3.png')\n  if (from === undefined || to === undefined) return 'MISSING ITEMS'\n  const handle = from.querySelector('.dshcb-drag-handle')\n  const transfer = new DataTransfer()\n  handle.dispatchEvent(new DragEvent('dragstart', { dataTransfer: transfer, bubbles: true, cancelable: true }))\n  await new Promise((resolve) => setTimeout(resolve, 80))\n  to.dispatchEvent(new DragEvent('dragover', { dataTransfer: transfer, bubbles: true, cancelable: true }))\n  to.dispatchEvent(new DragEvent('drop', { dataTransfer: transfer, bubbles: true, cancelable: true }))\n  handle.dispatchEvent(new DragEvent('dragend', { dataTransfer: transfer, bubbles: true, cancelable: true }))\n  await new Promise((resolve) => setTimeout(resolve, 200))\n  const stored = JSON.parse(localStorage.getItem('dsh-chat-background:rotation-group') ?? '[]')\n  const shown = [...document.querySelectorAll('.dshcb-group-item[data-selected] .dshcb-group-name')].map((el) => el.innerText.trim())\n  return JSON.stringify({ stored, shown })\n})()"
+    },
+    {
+      "check": "dragging a selected image reorders the rotation group",
+      "expr": "(() => {\n  const stored = JSON.parse(localStorage.getItem('dsh-chat-background:rotation-group') ?? '[]')\n  const shown = [...document.querySelectorAll('.dshcb-group-item[data-selected] .dshcb-group-name')].map((el) => el.innerText.trim())\n  return stored.join() === shown.join() && stored.includes('sample-background-2.png') && stored.includes('sample-background-3.png') && stored.includes('sample-background-4.png') && stored.indexOf('sample-background-3.png') > stored.indexOf('sample-background-2.png')\n})()"
+    },
+    {
+      "check": "reordering animates rows instead of snapping",
+      "expr": "window.__groupAnimations > 0"
+    },
+    {
+      "eval": "(() => { const row=[...document.querySelectorAll('.dshcb-row')].find((e)=>['轮换设置','Rotation settings'].includes(e.querySelector('.dshcb-title')?.innerText.trim())); const range=row?.querySelector('input[type=\"range\"]'); const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; setter.call(range,'2'); range.dispatchEvent(new Event('input',{bubbles:true})); range.dispatchEvent(new Event('change',{bubbles:true})); return range?.value; })()"
+    },
+    {
+      "eval": "(async () => { const observer = new MutationObserver(() => { if (document.querySelector('[data-dsh-chat-background-rotate-layer]')) window.__fadeLayerSeen = true; }); observer.observe(document.body, { childList: true, subtree: true }); const start=Date.now(); while(Date.now()-start<7000){ if(document.querySelector('[data-dsh-chat-background-rotate-layer]')){ window.__fadeLayerSeen=true; observer.disconnect(); return 'layer'; } await new Promise((r)=>setTimeout(r,40)); } return 'no layer'; })()"
+    },
+    {
+      "check": "the fade layer is present during a rotation",
+      "expr": "window.__fadeLayerSeen === true"
+    },
+    {
+      "shot": "07-rotation-fade"
+    },
+    {
+      "eval": "(() => { const row = [...document.querySelectorAll('.dshcb-row')].find((entry) => ['背景显示方式', 'Background display'].includes(entry.querySelector('.dshcb-title')?.innerText.trim())); const select = row?.querySelector('select'); const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set; setter.call(select, 'fixed'); select.dispatchEvent(new Event('change', { bubbles: true })); window.__rotationFixedAt = localStorage.getItem('dsh-chat-background:selection'); return select.value; })()"
+    },
+    {
+      "wait": 6500
+    },
+    {
+      "check": "switching to fixed stops the rotation timer",
+      "expr": "(() => { const row = [...document.querySelectorAll('.dshcb-row')].find((entry) => ['背景显示方式', 'Background display'].includes(entry.querySelector('.dshcb-title')?.innerText.trim())); const select = row?.querySelector('select'); return select?.value === 'fixed' && localStorage.getItem('dsh-chat-background:selection') === window.__rotationFixedAt; })()"
+    }
+  ]
+}

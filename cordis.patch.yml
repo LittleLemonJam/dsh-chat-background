@@ -1,0 +1,4 @@
+# 本插件的组合包插入条目：profile 的 cordis.patch.yml 引用 id `chat-background`。
+- insert:
+    - id: chat-background
+      name: 'dsh-chat-background'
