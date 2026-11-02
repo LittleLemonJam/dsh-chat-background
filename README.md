@@ -43,7 +43,9 @@ dsh plugin --profile desktop add github:LittleLemonJam/dsh-chat-background
 安装后**完全退出并重新打开** DSH 桌面端（宿主半在启动时加载，只刷新页面不够）。
 可以在 **插件 → 已安装** 里确认 `dsh-chat-background` 处于启用状态。
 
-### 从 npm 安装
+### 从 npm 安装（发布后可用）
+
+> 当前首发渠道是 GitHub；npm 包发布后可使用下面的命令。
 
 ```bash
 dsh plugin --profile desktop add dsh-chat-background

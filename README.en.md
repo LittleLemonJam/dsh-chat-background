@@ -44,7 +44,9 @@ dsh plugin --profile desktop add github:LittleLemonJam/dsh-chat-background
 Fully quit and reopen DSH afterwards — the host half loads at boot; refreshing the page is not enough.
 Check **Plugins → Installed** to confirm `dsh-chat-background` is enabled.
 
-### From npm
+### From npm (once published)
+
+> The first release is distributed through GitHub; use the command below after the npm package is published.
 
 ```bash
 dsh plugin --profile desktop add dsh-chat-background
