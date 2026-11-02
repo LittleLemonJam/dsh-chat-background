@@ -53,21 +53,25 @@ git tag v1.0.0
 git push origin main --tags
 ```
 
-## 3. npm 发布（可选）
+## 3. npm 发布
 
-插件可以只通过 GitHub 安装。若希望 `dsh plugin add dsh-chat-background` 直接可用，再发布 npm：
+`1.0.0` 已发布到 npm，`dsh plugin --profile desktop add dsh-chat-background` 可直接安装。
+发新版本时：
 
 ```bash
-npm login
-npm publish --access public
+npm whoami                      # 确认是维护者账号 lemonjam
+npm publish --access public     # 需要带 bypass 2FA 的 granular token
 ```
 
 验证：
 
 ```bash
-npm view dsh-chat-background version
+npm view dsh-chat-background version   # 应等于当前版本号
 dsh plugin --profile desktop add dsh-chat-background@1.0.0
 ```
+
+> npm 页面上的 README 是发布时 tarball 的快照，发布后再改 README 不会回写 npm 页面，
+> 下次发版时才会同步；以 GitHub 仓库的 README 为准。
 
 ## 4. 提交 DSH 插件市场
 
