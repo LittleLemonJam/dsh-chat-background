@@ -58,8 +58,20 @@ let lastReport = ''
  */
 function findFlow() {
   for (const flow of document.querySelectorAll(FLOW_SELECTOR)) {
-    if (flow.querySelector(ITEM_SELECTOR) === null) continue
+    const items = flow.querySelectorAll(ITEM_SELECTOR)
+    if (items.length === 0) continue
     if (flow.getClientRects().length === 0 && getComputedStyle(flow).display !== 'contents') continue
+    /* A hidden conversation view can keep a display:contents flow alive; only
+     * accept the one whose turn items actually have boxes. */
+    let visible = false
+    for (const item of items) {
+      const rect = item.getBoundingClientRect()
+      if (rect.width > 0 && rect.height > 0) {
+        visible = true
+        break
+      }
+    }
+    if (!visible) continue
     return flow
   }
   return null
@@ -171,8 +183,12 @@ function refresh() {
 
   const live = new Set()
   for (const card of cards) {
-    const top = Math.round(card.top)
-    const height = Math.max(0, Math.round(card.height))
+    /* Keep the first card inside the reading column: when the window is
+     * scrolled into the middle of a turn its measured top can be negative, and
+     * the card must not paint over the session header above the column. */
+    const rawTop = Math.round(card.top)
+    const top = Math.max(0, rawTop)
+    const height = Math.max(0, Math.round(card.height) - (top - rawTop))
     const key = card.key
     live.add(key)
     let element = scrims.get(key)

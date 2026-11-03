@@ -822,8 +822,18 @@
   var lastReport = "";
   function findFlow() {
     for (const flow of document.querySelectorAll(FLOW_SELECTOR)) {
-      if (flow.querySelector(ITEM_SELECTOR) === null) continue;
+      const items = flow.querySelectorAll(ITEM_SELECTOR);
+      if (items.length === 0) continue;
       if (flow.getClientRects().length === 0 && getComputedStyle(flow).display !== "contents") continue;
+      let visible = false;
+      for (const item of items) {
+        const rect = item.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          visible = true;
+          break;
+        }
+      }
+      if (!visible) continue;
       return flow;
     }
     return null;
@@ -911,8 +921,9 @@
     cardLayer.style.width = contentWidth + "px";
     const live = /* @__PURE__ */ new Set();
     for (const card of cards) {
-      const top = Math.round(card.top);
-      const height = Math.max(0, Math.round(card.height));
+      const rawTop = Math.round(card.top);
+      const top = Math.max(0, rawTop);
+      const height = Math.max(0, Math.round(card.height) - (top - rawTop));
       const key = card.key;
       live.add(key);
       let element = scrims.get(key);
