@@ -1,0 +1,47 @@
+{
+  "name": "09-windows-titlebar",
+  "allowConsoleErrors": [],
+  "seed": {
+    "dsh-chat-background:selection": "sample-background.png",
+    "dsh-chat-background:scrim-left": "40",
+    "dsh-chat-background:scrim-main": "0",
+    "dsh-chat-background:scrim-right": "40"
+  },
+  "steps": [
+    { "wait": 12000 },
+    { "wait": 600 },
+    { "wait": 2500 },
+    { "log": "the Windows titlebar marker paints the frame and center column with the base surface" },
+    {
+      "eval": "(() => { document.documentElement.setAttribute('data-windows-titlebar', ''); return 'titlebar marker set'; })()"
+    },
+    { "wait": 700 },
+    {
+      "check": "the center column is cleared through its slot marker, not only through the measured painter",
+      "expr": "(() => { const outlet = document.querySelector('[data-slot=\"main\"]'); const column = outlet === null ? null : outlet.parentElement; if (column === null) return false; const style = getComputedStyle(column); return column.hasAttribute('data-dsh-chat-background-main') && style.backgroundColor === 'rgba(0, 0, 0, 0)' && style.backgroundImage === 'none'; })()"
+    },
+    {
+      "eval": "(() => { const outlet = document.querySelector('[data-slot=\"main\"]'); const column = outlet === null ? null : outlet.parentElement; if (column === null) return 'NO COLUMN'; column.removeAttribute('data-dsh-chat-background-lift'); return 'measured painter mark removed'; })()"
+    },
+    { "wait": 400 },
+    {
+      "check": "a lost measured painter mark cannot whiten the rebuilt column",
+      "expr": "(() => { const outlet = document.querySelector('[data-slot=\"main\"]'); const column = outlet === null ? null : outlet.parentElement; if (column === null) return false; return getComputedStyle(column).backgroundColor === 'rgba(0, 0, 0, 0)'; })()"
+    },
+    { "eval": "(() => { window.dispatchEvent(new Event('focus')); return 'focus dispatched'; })()" },
+    { "wait": 600 },
+    {
+      "check": "regaining focus re-measures without covering the image",
+      "expr": "(() => { const outlet = document.querySelector('[data-slot=\"main\"]'); const column = outlet === null ? null : outlet.parentElement; const frame = document.querySelector('[data-dsh-chat-background-frame]'); return column !== null && frame !== null && getComputedStyle(column).backgroundColor === 'rgba(0, 0, 0, 0)' && getComputedStyle(frame).backgroundColor === 'rgba(0, 0, 0, 0)' && getComputedStyle(frame).backgroundImage === 'none'; })()"
+    },
+    { "shot": "09-windows-titlebar" },
+    {
+      "eval": "(() => { document.documentElement.removeAttribute('data-windows-titlebar'); return 'titlebar marker removed'; })()"
+    },
+    { "wait": 400 },
+    {
+      "check": "removing the marker keeps the image and the column transparent",
+      "expr": "(() => { const outlet = document.querySelector('[data-slot=\"main\"]'); const column = outlet === null ? null : outlet.parentElement; return document.documentElement.hasAttribute('data-dsh-chat-background') && column !== null && getComputedStyle(column).backgroundColor === 'rgba(0, 0, 0, 0)'; })()"
+    }
+  ]
+}

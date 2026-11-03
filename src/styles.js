@@ -189,6 +189,21 @@ ${active} [class*="sidebarCol"] {
   isolation: isolate !important;
 }
 
+/* The app paints the base surface on the frame and on the center/right
+ * columns: the Windows titlebar frame gives the center column an opaque fill
+ * plus a rounded corner, and macOS fills the right column. The measured
+ * painter marks only describe the DOM that was measured, so a rebuilt or
+ * restyled column can come back white while the slots stay the same (the
+ * marker is refreshed on every apply, the measured mark is not). Clearing
+ * through the stable slot-derived markers keeps the image visible across
+ * rebuilds, window restores and titlebar re-themes. */
+${active} [${MAIN_COLUMN_ATTRIBUTE}],
+${active} [${RIGHT_COLUMN_ATTRIBUTE}],
+${active} [${LAYOUT_FRAME_ATTRIBUTE}] {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
 /* Left sidebar scrim. */
 ${active} [${SIDEBAR_COLUMN_ATTRIBUTE}]::before,
 ${active} [class*="sidebarCol"]::before {

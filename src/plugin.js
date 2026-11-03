@@ -2,7 +2,13 @@
  * Browser-half entry point: binds React, creates the settings instances,
  * applies the durable state and wires every slot and effect the shell owns.
  */
-import { applyBackground, flushBackground, installRightbarGestures, teardownVisuals } from './background.js'
+import {
+  applyBackground,
+  flushBackground,
+  installRightbarGestures,
+  invalidatePainters,
+  teardownVisuals
+} from './background.js'
 import {
   LOCALE_NS,
   PROGRESS_DOCK_ORDER,
@@ -163,8 +169,33 @@ export function createPlugin(require) {
         }
         if (document.body === null) document.addEventListener('DOMContentLoaded', observe, { once: true })
         else observe()
+        /* The Windows desktop preload marks the titlebar frame on <html>, which
+         * gives the center column an opaque base surface; that marker can land
+         * after the first measurement (or be re-applied around a window
+         * restore), so a marker change re-measures the layout. */
+        const rootObserver = new MutationObserver(() => {
+          invalidatePainters()
+        })
+        rootObserver.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ['data-windows-titlebar', 'data-platform']
+        })
+        /* A rebuilt renderer or a restored/occluded window can replace the
+         * frame columns without changing the slot count; re-measure when the
+         * document becomes visible again. */
+        const onFocus = () => {
+          invalidatePainters()
+        }
+        const onVisibility = () => {
+          if (!document.hidden) invalidatePainters()
+        }
+        window.addEventListener('focus', onFocus)
+        document.addEventListener('visibilitychange', onVisibility)
         return () => {
           observer.disconnect()
+          rootObserver.disconnect()
+          window.removeEventListener('focus', onFocus)
+          document.removeEventListener('visibilitychange', onVisibility)
         }
       }, 'chat-background: DOM, scheme and switch follow-up')
 

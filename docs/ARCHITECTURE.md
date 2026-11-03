@@ -125,6 +125,10 @@ composer 包装层 ResizeObserver（纯样式尺寸） ──┘        ├─ a
 - 左侧栏/主窗口/右侧栏由稳定槽位（`[data-slot="sidebar"]`、`[data-slot="main"]`、`[data-slot="rightbar"]`）的父节点打标，
   各自建立 `position: relative` + `isolation: isolate` 的层叠上下文，再用 `::before`/`::after` 在 `z-index: -1` 画独立遮罩；
   因此调暗侧栏不会影响正文，反之亦然。
+- app 会把 base surface 画在布局 frame、主窗口列和右侧栏上：Windows 标题栏模式还会给主窗口列铺不透明底色和 16px 圆角。
+  这些表面通过**槽位标记**（`data-dsh-chat-background-main/right/frame`）清成透明，而不是只依赖一次性测量出的 `lift` 标记，
+  所以列被重建、标题栏重新主题化或窗口从遮挡恢复后都不会重新变白。测量标记丢失、`data-windows-titlebar`/`data-platform`
+  变化、窗口 `focus` 或 `visibilitychange` 变可见时会主动重新测量，见 `src/background.js` 的 `invalidatePainters()`。
 - 窗口控制条：桌面预加载用隐藏 probe 的 `background-color: var(--dsw-specific-sidebar-fill)` 采样原生 titleBarOverlay 颜色；
   插件只在该 probe 上覆盖为透明（不改 token），并通过改写 body 自定义属性触发预加载的 observer 重新发送，见 `src/background.js`。
 

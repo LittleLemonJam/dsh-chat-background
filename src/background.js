@@ -716,12 +716,29 @@ export function flushBackground() {
 }
 
 /**
+ * Forget the measured opaque-surface snapshot and flush, so the next pass
+ * re-measures the layout.
+ *
+ * Window restores, titlebar re-themes and renderer rebuilds can replace or
+ * restyle the frame columns while the slot count stays the same. The measured
+ * painter marks only ever describe the DOM they measured, so they would keep
+ * vouching for elements that no longer paint the conversation (and stay silent
+ * about the new opaque ones). Re-measuring after a focus/visibility/titlebar
+ * change turns that stale snapshot into a fresh one; the stable column markers
+ * carry the immediate fix in the stylesheet either way.
+ */
+export function invalidatePainters() {
+  markSignature = -1
+  markContainer = null
+  flushBackground()
+}
+
+/**
  * Remove everything this plugin added to the document: attributes, inline
  * properties, injected nodes, measured rules and a pending flush. Called from
  * the plugin's disposal so a disable or hot replacement leaves no residue
  * (`BG-08`).
- */
-export function teardownVisuals() {
+ */ export function teardownVisuals() {
   if (flushHandle !== 0) {
     if (flushIsTimeout) window.clearTimeout(flushHandle)
     else window.cancelAnimationFrame(flushHandle)

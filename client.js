@@ -1195,6 +1195,11 @@
       flushHandle = window.setTimeout(run, 16);
     }
   }
+  function invalidatePainters() {
+    markSignature = -1;
+    markContainer = null;
+    flushBackground();
+  }
   function teardownVisuals() {
     if (flushHandle !== 0) {
       if (flushIsTimeout) window.clearTimeout(flushHandle);
@@ -2481,6 +2486,21 @@ ${active} [class*="sidebarCol"] {
   isolation: isolate !important;
 }
 
+/* The app paints the base surface on the frame and on the center/right
+ * columns: the Windows titlebar frame gives the center column an opaque fill
+ * plus a rounded corner, and macOS fills the right column. The measured
+ * painter marks only describe the DOM that was measured, so a rebuilt or
+ * restyled column can come back white while the slots stay the same (the
+ * marker is refreshed on every apply, the measured mark is not). Clearing
+ * through the stable slot-derived markers keeps the image visible across
+ * rebuilds, window restores and titlebar re-themes. */
+${active} [${MAIN_COLUMN_ATTRIBUTE}],
+${active} [${RIGHT_COLUMN_ATTRIBUTE}],
+${active} [${LAYOUT_FRAME_ATTRIBUTE}] {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
 /* Left sidebar scrim. */
 ${active} [${SIDEBAR_COLUMN_ATTRIBUTE}]::before,
 ${active} [class*="sidebarCol"]::before {
@@ -3170,8 +3190,26 @@ ${active} :is([data-slot="settings.section"], [data-slot="settings.header"], [da
           };
           if (document.body === null) document.addEventListener("DOMContentLoaded", observe, { once: true });
           else observe();
+          const rootObserver = new MutationObserver(() => {
+            invalidatePainters();
+          });
+          rootObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["data-windows-titlebar", "data-platform"]
+          });
+          const onFocus = () => {
+            invalidatePainters();
+          };
+          const onVisibility = () => {
+            if (!document.hidden) invalidatePainters();
+          };
+          window.addEventListener("focus", onFocus);
+          document.addEventListener("visibilitychange", onVisibility);
           return () => {
             observer.disconnect();
+            rootObserver.disconnect();
+            window.removeEventListener("focus", onFocus);
+            document.removeEventListener("visibilitychange", onVisibility);
           };
         }, "chat-background: DOM, scheme and switch follow-up");
         ctx.effect(() => ctx.locale.register(LOCALE_NS, { zh, en }), "chat-background: settings dictionaries");
