@@ -1,6 +1,6 @@
 {
   "name": "dsh-chat-background",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Chat background image, sidebar veil, composer strip, task progress bar and all-session token total for the DeepSeek Harness (DSH) Web GUI.",
   "meta": {
     "title": "聊天背景",

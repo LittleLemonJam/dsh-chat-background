@@ -25,12 +25,12 @@ npm pack --dry-run    # 确认 tarball 内容
 - 删除旧 tag（如 `git tag -d v1.2.0`），只保留要发布的版本；
 - 复查 `git log --oneline` 与 `git ls-files`，确认没有个人文件后再推送。
 
-当前仓库已按此方式重建为单提交的 1.0.0。
+当前仓库已按此方式重建为单提交的 1.0.0 起点，当前发布版本 1.1.0。
 
 ### 2.2 首次创建仓库
 
 1. 在 GitHub 新建公开仓库 `dsh-chat-background`（默认分支 `main`）；
-2. 推送代码与 `v1.0.0` 标签；
+2. 推送代码与 `v1.1.0` 标签；
 3. 仓库 **About** 填写简介：
    - 描述：`给 DeepSeek Harness 桌面端换背景：背景图/轮换分组/三栏遮罩/输入栏背景条/任务进度条/Token 用量`；
    - 网站：留空或填仓库地址；
@@ -49,13 +49,13 @@ npm pack --dry-run    # 确认 tarball 内容
 生成 npm tarball 并创建 GitHub Release。发布后在 Release 中附上主要更新内容即可。
 
 ```bash
-git tag v1.0.0
+git tag v1.1.0
 git push origin main --tags
 ```
 
 ## 3. npm 发布
 
-`1.0.0` 已发布到 npm，`dsh plugin --profile desktop add dsh-chat-background` 可直接安装。
+`1.1.0` 已发布到 npm，`dsh plugin --profile desktop add dsh-chat-background` 可直接安装。
 发新版本时：
 
 ```bash
@@ -67,7 +67,7 @@ npm publish --access public     # 需要带 bypass 2FA 的 granular token
 
 ```bash
 npm view dsh-chat-background version   # 应等于当前版本号
-dsh plugin --profile desktop add dsh-chat-background@1.0.0
+dsh plugin --profile desktop add dsh-chat-background@1.1.0
 ```
 
 > npm 页面上的 README 是发布时 tarball 的快照，发布后再改 README 不会回写 npm 页面，

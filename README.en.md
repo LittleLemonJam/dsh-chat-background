@@ -51,7 +51,7 @@ Check **Plugins → Installed** to confirm `dsh-chat-background` is enabled.
 dsh plugin --profile desktop add dsh-chat-background
 ```
 
-The npm package tracks the GitHub release (currently `1.0.0`); either channel works.
+The npm package tracks the GitHub release (currently `1.1.0`); either channel works.
 
 ### Manual install
 
