@@ -14,7 +14,7 @@
  */
 import { ACTIVE_ATTRIBUTE, READ_COLUMN_ATTRIBUTE } from './constants.js'
 import { recordDiagnostics } from './diagnostics.js'
-import { computeTurnCards, groupTurnRanges } from './lib/turn-masks.js'
+import { computeTurnCards } from './lib/turn-masks.js'
 
 /** Stable slot of the conversation flow (the turn items live inside it). */
 const FLOW_SELECTOR = '[data-slot="conversation.chat.flow"]'
@@ -28,15 +28,23 @@ const SCRIM_CLASS = 'dshcb-turn-scrim'
 /** Preferred vertical padding of one card. */
 const PADDING = 10
 
-/** Smallest wallpaper gap kept between two neighbouring cards (the host only
- * leaves 6–12px between flow items, so this is what makes the turn split read
- * as two cards instead of one). */
-const MIN_GAP = 12
+/** Smallest wallpaper gap kept between two neighbouring cards. With the
+ * comfortable turn spacing below this leaves a ~20px strip of wallpaper. */
+const MIN_GAP = 20
 
 /** Horizontal growth of one card beyond the reading column, per side. The
  * extra width becomes whitespace between the text and the card edge; 24px is
  * exactly the reading column's side clearance (where the width handles live). */
 const SIDE_PADDING = 24
+
+/** Real layout distance between two conversation turns. DSH itself uses 12px;
+ * the comfortable reading layout wants a wider breath between cards. This is a
+ * genuine layout change (the conversation gets taller), applied only while a
+ * background is active and reverted on teardown. */
+const TURN_GAP = 28
+
+/** The host's own flow-gap variable, used by its `margin-top` rules. */
+const GAP_PROPERTY = '--dsh-chat-flow-gap'
 
 /** @type {Element | null} */
 let column = null
@@ -55,6 +63,9 @@ const scrims = new Map()
 
 /** Last rendered card rectangle per turn, to keep steady state write-free. */
 const applied = new Map()
+
+/** Boundary items whose flow-gap variable we raised, with the applied value. */
+const boundaries = new Map()
 
 /** Last diagnostics payload, so frequent refreshes do not churn the snapshot. */
 let lastReport = ''
@@ -109,6 +120,8 @@ function disposeLayer() {
   layer = null
   if (column !== null) column.removeAttribute(READ_COLUMN_ATTRIBUTE)
   column = null
+  for (const [element] of boundaries) element.style.removeProperty(GAP_PROPERTY)
+  boundaries.clear()
   scrims.clear()
   applied.clear()
 }
@@ -138,6 +151,69 @@ function ensureLayer(nextColumn) {
   }
   if (layer.parentElement !== column) column.appendChild(layer)
   return layer
+}
+
+/**
+ * Measure the visible flow items and merge them into one range per turn.
+ * @param flow - the conversation flow.
+ * @param originTop - the reading column's content origin in page coordinates.
+ * @returns the turn groups, ordered top to bottom, with their first DOM item.
+ */
+function measureTurns(flow, originTop) {
+  const turns = []
+  const byKey = new Map()
+  for (const item of flow.querySelectorAll(ITEM_SELECTOR)) {
+    if (item.closest('[hidden]') !== null) continue
+    const itemRect = item.getBoundingClientRect()
+    if (itemRect.width <= 0 || itemRect.height <= 0) continue
+    const turn = item.getAttribute('data-chat-turn') ?? ''
+    if (turn === '') continue
+    const top = itemRect.top - originTop
+    const bottom = itemRect.bottom - originTop
+    const existing = byKey.get(turn)
+    if (existing === undefined) {
+      const group = { key: turn, top, bottom, first: item }
+      byKey.set(turn, group)
+      turns.push(group)
+    } else {
+      if (top < existing.top) existing.top = top
+      if (bottom > existing.bottom) existing.bottom = bottom
+    }
+  }
+  turns.sort((left, right) => left.top - right.top)
+  return turns
+}
+
+/**
+ * Give every turn boundary the comfortable layout gap by writing the host's own
+ * flow-gap variable on the next turn's first flow item. The host resolves
+ * `margin-top: var(--dsh-chat-flow-gap, 6px)` from that element, so this raises
+ * the real spacing without touching the items inside a turn. Boundaries that
+ * disappear get their variable removed (the host stylesheet then supplies its
+ * own 12px again).
+ * @param turns - the measured turn groups.
+ * @returns whether the layout was changed.
+ */
+function syncTurnGaps(turns) {
+  const desired = new Map()
+  for (let index = 1; index < turns.length; index += 1) {
+    const first = turns[index].first
+    if (first !== null) desired.set(first, TURN_GAP + 'px')
+  }
+  let changed = false
+  for (const [element] of boundaries) {
+    if (element.isConnected && desired.has(element)) continue
+    element.style.removeProperty(GAP_PROPERTY)
+    boundaries.delete(element)
+    changed = true
+  }
+  for (const [element, value] of desired) {
+    if (boundaries.get(element) === value) continue
+    element.style.setProperty(GAP_PROPERTY, value)
+    boundaries.set(element, value)
+    changed = true
+  }
+  return changed
 }
 
 /**
@@ -171,19 +247,12 @@ function refresh() {
   const contentWidth = Math.max(0, nextColumn.clientWidth - paddingLeft - paddingRight)
 
   /* One module per conversation turn: every flow item of the turn contributes
-   * its own vertical range, then the ranges are merged by turn id. */
-  const ranges = []
-  for (const item of flow.querySelectorAll(ITEM_SELECTOR)) {
-    if (item.closest('[hidden]') !== null) continue
-    const itemRect = item.getBoundingClientRect()
-    if (itemRect.width <= 0 || itemRect.height <= 0) continue
-    ranges.push({
-      turn: item.getAttribute('data-chat-turn') ?? '',
-      top: itemRect.top - originTop,
-      bottom: itemRect.bottom - originTop
-    })
-  }
-  const cards = computeTurnCards(groupTurnRanges(ranges), { padding: PADDING, minGap: MIN_GAP })
+   * its own vertical range, then the ranges are merged by turn id. Raising a
+   * boundary gap changes the layout, so measure once more before the cards are
+   * derived from the ranges. */
+  let turns = measureTurns(flow, originTop)
+  if (syncTurnGaps(turns)) turns = measureTurns(flow, originTop)
+  const cards = computeTurnCards(turns, { padding: PADDING, minGap: MIN_GAP })
 
   /* The card is wider than the reading column by SIDE_PADDING on each side:
    * the extra width is inner whitespace, so text never touches the rounded

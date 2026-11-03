@@ -11,11 +11,13 @@
     { "wait": 12000 },
     { "wait": 600 },
     { "wait": 2500 },
-    { "log": "inject a conversation flow with three turns (prompt + reply each) into the reading column" },
     {
-      "eval": "(() => { const host = document.querySelector('[data-slot=\"main\"]')?.parentElement ?? document.body; const column = document.createElement('div'); column.id = 'dshcb-test-column'; column.style.cssText = 'width:720px;max-width:calc(100% - 40px);margin:0 auto;'; const flow = document.createElement('div'); flow.id = 'dshcb-test-flow'; flow.setAttribute('data-slot', 'conversation.chat.flow'); for (let turn = 1; turn <= 3; turn += 1) { for (let part = 0; part < 2; part += 1) { const item = document.createElement('div'); item.setAttribute('data-chat-turn', String(turn)); item.setAttribute('data-chat-flow-kind', part === 0 ? 'user' : 'assistant'); item.style.cssText = 'height:60px;margin-top:' + (turn > 1 && part === 0 ? '20px' : part === 1 ? '6px' : '0') + ';background:rgba(255,255,255,.12);border-radius:8px;'; flow.appendChild(item); } } column.appendChild(flow); host.appendChild(column); return 'injected'; })()"
+      "log": "inject a conversation flow with three turns (prompt + reply each); the host-like CSS derives its flow gap from --dsh-chat-flow-gap"
     },
-    { "wait": 900 },
+    {
+      "eval": "(() => { const style = document.createElement('style'); style.id = 'dshcb-test-gap-style'; style.textContent = '#dshcb-test-flow > [data-chat-turn] + [data-chat-turn] { margin-top: var(--dsh-chat-flow-gap, 6px); }'; document.head.appendChild(style); const host = document.querySelector('[data-slot=\"main\"]')?.parentElement ?? document.body; const column = document.createElement('div'); column.id = 'dshcb-test-column'; column.style.cssText = 'width:720px;max-width:calc(100% - 40px);margin:0 auto;'; const flow = document.createElement('div'); flow.id = 'dshcb-test-flow'; flow.setAttribute('data-slot', 'conversation.chat.flow'); for (let turn = 1; turn <= 3; turn += 1) { for (let part = 0; part < 2; part += 1) { const item = document.createElement('div'); item.setAttribute('data-chat-turn', String(turn)); item.setAttribute('data-chat-flow-kind', part === 0 ? 'user' : 'assistant'); item.style.cssText = 'height:60px;background:rgba(255,255,255,.12);border-radius:8px;'; flow.appendChild(item); } } column.appendChild(flow); host.appendChild(column); return 'injected'; })()"
+    },
+    { "wait": 1000 },
     {
       "check": "one card is painted per conversation turn",
       "expr": "(() => document.querySelectorAll('.dshcb-turn-scrim').length === 3)()"
@@ -25,8 +27,12 @@
       "expr": "(() => { const flow = document.querySelector('#dshcb-test-flow'); const layer = document.querySelector('.dshcb-turn-scrims'); if (flow === null || layer === null) return false; const flowRect = flow.getBoundingClientRect(); const expected = Math.round(flowRect.width) + 48; const cards = [...document.querySelectorAll('.dshcb-turn-scrim')]; const layerRect = layer.getBoundingClientRect(); return cards.every((card) => { const rect = card.getBoundingClientRect(); const style = getComputedStyle(card); return Math.abs(rect.width - expected) <= 1 && Math.abs(layerRect.left - (flowRect.left - 24)) <= 1 && style.borderRadius !== '0px' && style.backgroundImage.includes('linear-gradient'); }); })()"
     },
     {
-      "check": "cards keep a wallpaper gap between two turns",
-      "expr": "(() => { const cards = [...document.querySelectorAll('.dshcb-turn-scrim')].map((card) => card.getBoundingClientRect()).sort((a, b) => a.top - b.top); if (cards.length !== 3) return false; let ok = true; for (let index = 1; index < cards.length; index += 1) { const gap = cards[index].top - cards[index - 1].bottom; if (gap < 4) ok = false; } return ok; })()"
+      "check": "the comfortable 28px layout gap is written on each next turn's first item only",
+      "expr": "(() => { const items = [...document.querySelectorAll('#dshcb-test-flow > [data-chat-turn]')]; if (items.length !== 6) return false; const gap = (item) => item.style.getPropertyValue('--dsh-chat-flow-gap'); return gap(items[0]) === '' && gap(items[1]) === '' && gap(items[2]) === '28px' && gap(items[3]) === '' && gap(items[4]) === '28px' && gap(items[5]) === ''; })()"
+    },
+    {
+      "check": "cards keep a wallpaper strip of about 20px between two turns",
+      "expr": "(() => { const cards = [...document.querySelectorAll('.dshcb-turn-scrim')].map((card) => card.getBoundingClientRect()).sort((a, b) => a.top - b.top); if (cards.length !== 3) return false; let ok = true; for (let index = 1; index < cards.length; index += 1) { const gap = cards[index].top - cards[index - 1].bottom; if (gap < 18 || gap > 24) ok = false; } return ok; })()"
     },
     {
       "check": "the card of one turn covers both the prompt and the reply",
@@ -41,15 +47,15 @@
       "expr": "(() => { const flow = document.querySelector('#dshcb-test-flow'); if (flow === null) return false; return flow.hasAttribute('data-dsh-chat-background-read-column') || (flow.parentElement !== null && flow.parentElement.hasAttribute('data-dsh-chat-background-read-column')); })()"
     },
     {
-      "log": "removing the conversation removes the cards again"
+      "log": "removing the conversation removes the cards and restores the host gap"
     },
     {
-      "eval": "(() => { document.querySelector('#dshcb-test-column')?.remove(); return 'removed'; })()"
+      "eval": "(() => { window.__dshcbTurnBoundary = document.querySelector('#dshcb-test-flow > [data-chat-turn]:nth-child(3)'); document.querySelector('#dshcb-test-column')?.remove(); document.querySelector('#dshcb-test-gap-style')?.remove(); return 'removed'; })()"
     },
     { "wait": 900 },
     {
-      "check": "the layer and the column marker are cleaned up with the flow",
-      "expr": "(() => document.querySelector('.dshcb-turn-scrims') === null && document.querySelector('[data-dsh-chat-background-read-column]') === null)()"
+      "check": "the layer, the column marker and the raised gap are all cleaned up",
+      "expr": "(() => { const gone = document.querySelector('.dshcb-turn-scrims') === null && document.querySelector('[data-dsh-chat-background-read-column]') === null; const restored = window.__dshcbTurnBoundary !== null && window.__dshcbTurnBoundary.style.getPropertyValue('--dsh-chat-flow-gap') === ''; return gone && restored; })()"
     }
   ]
 }

@@ -764,25 +764,6 @@
   }
 
   // src/lib/turn-masks.js
-  function groupTurnRanges(items) {
-    const groups = [];
-    const byKey = /* @__PURE__ */ new Map();
-    for (const item of items) {
-      if (typeof item.turn !== "string" || item.turn === "") continue;
-      if (!(item.bottom > item.top)) continue;
-      const existing = byKey.get(item.turn);
-      if (existing === void 0) {
-        const group = { key: item.turn, top: item.top, bottom: item.bottom };
-        byKey.set(item.turn, group);
-        groups.push(group);
-      } else {
-        if (item.top < existing.top) existing.top = item.top;
-        if (item.bottom > existing.bottom) existing.bottom = item.bottom;
-      }
-    }
-    groups.sort((left, right) => left.top - right.top);
-    return groups;
-  }
   function sidePadding(gap, padding, minGap) {
     if (!Number.isFinite(gap)) return padding;
     if (gap <= 0) return 0;
@@ -812,14 +793,17 @@
   var LAYER_CLASS = "dshcb-turn-scrims";
   var SCRIM_CLASS = "dshcb-turn-scrim";
   var PADDING = 10;
-  var MIN_GAP = 12;
+  var MIN_GAP = 20;
   var SIDE_PADDING = 24;
+  var TURN_GAP = 28;
+  var GAP_PROPERTY = "--dsh-chat-flow-gap";
   var column = null;
   var layer = null;
   var resizeObserver = null;
   var frame = 0;
   var scrims = /* @__PURE__ */ new Map();
   var applied = /* @__PURE__ */ new Map();
+  var boundaries = /* @__PURE__ */ new Map();
   var lastReport = "";
   function findFlow() {
     for (const flow of document.querySelectorAll(FLOW_SELECTOR)) {
@@ -856,6 +840,8 @@
     layer = null;
     if (column !== null) column.removeAttribute(READ_COLUMN_ATTRIBUTE);
     column = null;
+    for (const [element] of boundaries) element.style.removeProperty(GAP_PROPERTY);
+    boundaries.clear();
     scrims.clear();
     applied.clear();
   }
@@ -879,6 +865,51 @@
     }
     if (layer.parentElement !== column) column.appendChild(layer);
     return layer;
+  }
+  function measureTurns(flow, originTop) {
+    const turns = [];
+    const byKey = /* @__PURE__ */ new Map();
+    for (const item of flow.querySelectorAll(ITEM_SELECTOR)) {
+      if (item.closest("[hidden]") !== null) continue;
+      const itemRect = item.getBoundingClientRect();
+      if (itemRect.width <= 0 || itemRect.height <= 0) continue;
+      const turn = item.getAttribute("data-chat-turn") ?? "";
+      if (turn === "") continue;
+      const top = itemRect.top - originTop;
+      const bottom = itemRect.bottom - originTop;
+      const existing = byKey.get(turn);
+      if (existing === void 0) {
+        const group = { key: turn, top, bottom, first: item };
+        byKey.set(turn, group);
+        turns.push(group);
+      } else {
+        if (top < existing.top) existing.top = top;
+        if (bottom > existing.bottom) existing.bottom = bottom;
+      }
+    }
+    turns.sort((left, right) => left.top - right.top);
+    return turns;
+  }
+  function syncTurnGaps(turns) {
+    const desired = /* @__PURE__ */ new Map();
+    for (let index = 1; index < turns.length; index += 1) {
+      const first = turns[index].first;
+      if (first !== null) desired.set(first, TURN_GAP + "px");
+    }
+    let changed = false;
+    for (const [element] of boundaries) {
+      if (element.isConnected && desired.has(element)) continue;
+      element.style.removeProperty(GAP_PROPERTY);
+      boundaries.delete(element);
+      changed = true;
+    }
+    for (const [element, value] of desired) {
+      if (boundaries.get(element) === value) continue;
+      element.style.setProperty(GAP_PROPERTY, value);
+      boundaries.set(element, value);
+      changed = true;
+    }
+    return changed;
   }
   function refresh() {
     frame = 0;
@@ -906,18 +937,9 @@
     const originTop = rect.top + borderTop - scrollTop;
     const originLeft = rect.left + borderLeft - scrollLeft;
     const contentWidth = Math.max(0, nextColumn.clientWidth - paddingLeft - paddingRight);
-    const ranges = [];
-    for (const item of flow.querySelectorAll(ITEM_SELECTOR)) {
-      if (item.closest("[hidden]") !== null) continue;
-      const itemRect = item.getBoundingClientRect();
-      if (itemRect.width <= 0 || itemRect.height <= 0) continue;
-      ranges.push({
-        turn: item.getAttribute("data-chat-turn") ?? "",
-        top: itemRect.top - originTop,
-        bottom: itemRect.bottom - originTop
-      });
-    }
-    const cards = computeTurnCards(groupTurnRanges(ranges), { padding: PADDING, minGap: MIN_GAP });
+    let turns = measureTurns(flow, originTop);
+    if (syncTurnGaps(turns)) turns = measureTurns(flow, originTop);
+    const cards = computeTurnCards(turns, { padding: PADDING, minGap: MIN_GAP });
     const cardLeft = paddingLeft - SIDE_PADDING;
     const cardWidth = contentWidth + SIDE_PADDING * 2;
     cardLayer.style.left = cardLeft + "px";
