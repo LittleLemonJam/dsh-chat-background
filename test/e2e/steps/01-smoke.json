@@ -167,6 +167,14 @@
       "expr": "(() => { const rows = [...document.querySelectorAll('.dshcb-section .dshcb-tab-panel .dshcb-row')]; return rows.length === 6 && rows.slice(0, -1).every((row) => Number.parseFloat(getComputedStyle(row).borderBottomWidth) > 0); })()"
     },
     {
+      "check": "every row is a two-column module: the control block stays right-aligned and never overlaps the copy",
+      "expr": "(() => { const rows = [...document.querySelectorAll('.dshcb-section .dshcb-tab-panel .dshcb-row')]; if (rows.length !== 6) return false; return rows.every((row) => { const text = row.querySelector('.dshcb-text'); const control = row.querySelector('.dshcb-control'); if (text === null || control === null) return false; const rowRect = row.getBoundingClientRect(); const textRect = text.getBoundingClientRect(); const controlRect = control.getBoundingClientRect(); return controlRect.left >= textRect.right - 1 && Math.abs(controlRect.right - rowRect.right) <= 1 && controlRect.width > 0; }); })()"
+    },
+    {
+      "check": "the three scrim sliders share one control module width",
+      "expr": "(() => { const rows = [...document.querySelectorAll('.dshcb-section .dshcb-tab-panel .dshcb-row')].filter((row) => ['左侧栏遮罩层', '主窗口遮罩层', '右侧栏遮罩层'].includes(row.querySelector('.dshcb-title')?.innerText.trim())); if (rows.length !== 3) return false; const widths = rows.map((row) => Math.round(row.querySelector('.dshcb-control').getBoundingClientRect().width)); const ranges = rows.map((row) => Math.round(row.querySelector('.dshcb-range').getBoundingClientRect().width)); return new Set(widths).size === 1 && new Set(ranges).size === 1 && widths[0] > 0; })()"
+    },
+    {
       "shot": "01-smoke-settings-background"
     },
     {

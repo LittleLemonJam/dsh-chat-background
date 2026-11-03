@@ -264,24 +264,15 @@ export function ModeRow() {
     Row,
     { title: copy.modeTitle },
     h(
-      'div',
-      { className: 'dshcb-rotation-controls' },
-      h(
-        'label',
-        { className: 'dshcb-control-field' },
-        h('span', { className: 'dshcb-control-caption' }, copy.modeTitle),
-        h(
-          'select',
-          {
-            className: 'dshcb-select',
-            value: mode,
-            'aria-label': copy.modeTitle,
-            onChange: (event) => change(event.target.value)
-          },
-          h('option', { value: 'fixed' }, copy.modeFixed),
-          h('option', { value: 'rotation' }, copy.modeRotation)
-        )
-      )
+      'select',
+      {
+        className: 'dshcb-select',
+        value: mode,
+        'aria-label': copy.modeTitle,
+        onChange: (event) => change(event.target.value)
+      },
+      h('option', { value: 'fixed' }, copy.modeFixed),
+      h('option', { value: 'rotation' }, copy.modeRotation)
     )
   )
 }

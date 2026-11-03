@@ -270,7 +270,7 @@ async function runSuite({ suiteFile, url, browser }) {
       '--steps',
       join(STEPS_DIR, suiteFile),
       '--window',
-      '1440x900'
+      args.window ?? '1440x900'
     ],
     /* The tokenized URL travels in the environment rather than argv, so it does
      * not appear in the local process list (`SEC-10`). */

@@ -67,36 +67,42 @@ ${active} {
   object-position: center center;
 }
 
-/* Rotation settings block. The mode/effect/group controls stack inside
- * the normal row control column so they line up with every other row. */
+/* Rotation settings block. Each field is its own two-column module so the
+ * captions, inputs and value slots keep the same width on every display,
+ * font scale and window size; the block only decides the module width. */
 .dshcb-rotation-controls {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 8px;
-  min-width: 260px;
-  max-width: 340px;
+  width: min(340px, 100%);
+  min-width: 0;
 }
 .dshcb-control-field {
-  display: flex;
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  column-gap: 8px;
+  min-width: 0;
   font-size: 12px;
 }
 .dshcb-control-field > .dshcb-control-caption {
-  flex: 0 0 auto;
+  min-width: 0;
   color: var(--dsw-alias-label-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .dshcb-control-field > .dshcb-select {
-  flex: 1 1 auto;
+  width: 100%;
+  max-width: none;
   min-width: 0;
 }
 .dshcb-control-field > .dshcb-range {
-  flex: 1 1 auto;
-  min-width: 80px;
+  width: 100%;
+  min-width: 0;
 }
 .dshcb-control-field > .dshcb-value {
-  flex: 0 0 auto;
-  min-width: 42px;
+  min-width: 40px;
+  justify-self: end;
   text-align: end;
 }
 .dshcb-group-list {
@@ -489,31 +495,41 @@ ${active} :is([data-slot="settings.section"], [data-slot="settings.header"], [da
 }
 .dshcb-bg-file {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
 .dshcb-bg-select {
-  flex: 1;
+  flex: 1 1 200px;
   max-width: none;
   min-width: 0;
 }
 .dshcb-bg-file .dshcb-select {
-  flex: 1;
+  flex: 1 1 200px;
   max-width: none;
+  min-width: 0;
+}
+.dshcb-bg-file .dshcb-button {
+  flex: none;
 }
 
+/* Every setting row is a two-column module: the copy takes the free space,
+ * the control block keeps its own intrinsic width and is pinned to the right.
+ * Grid (not flex + space-between) is what stops a wide control from squeezing
+ * the label or shifting it between window sizes, zoom levels and displays. */
 .dshcb-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
+  column-gap: 24px;
+  row-gap: 8px;
   padding: 16px 0;
   border-bottom: 0.5px solid var(--dsw-alias-border-l2);
 }
 .dshcb-text {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  align-items: stretch;
   gap: 4px;
   min-width: 0;
 }
@@ -539,14 +555,20 @@ ${active} :is([data-slot="settings.section"], [data-slot="settings.header"], [da
   font-size: 12px;
   line-height: 18px;
 }
+/* One self-contained module per control group: it keeps its size and stays
+ * right-aligned whatever the label wraps to. */
 .dshcb-control {
-  display: inline-flex;
+  display: flex;
+  flex: none;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
+  min-width: 0;
 }
 /* ---- controls ------------------------------------------------------------ */
 
 .dshcb-button {
+  flex: none;
   height: 32px;
   padding: 0 12px;
   border: 0.5px solid var(--dsw-alias-border-l1);
@@ -556,6 +578,7 @@ ${active} :is([data-slot="settings.section"], [data-slot="settings.header"], [da
   font: inherit;
   font-size: 13px;
   line-height: 20px;
+  white-space: nowrap;
   cursor: pointer;
 }
 .dshcb-button:hover:not(:disabled) {
@@ -566,8 +589,10 @@ ${active} :is([data-slot="settings.section"], [data-slot="settings.header"], [da
   cursor: default;
 }
 .dshcb-select {
-  height: 32px;
+  flex: none;
+  width: 180px;
   max-width: 180px;
+  height: 32px;
   padding: 0 6px;
   border: 0.5px solid var(--dsw-alias-border-l1);
   border-radius: var(--dsw-radius-sm);
@@ -644,8 +669,13 @@ ${active} :is([data-slot="settings.section"], [data-slot="settings.header"], [da
   outline-offset: 2px;
 }
 
-/* Range slider. */
+/* Range slider. The track and thumb sizes are variables and the thumb offset
+ * is derived from them; a hand-tuned pixel offset drifts once the app's font
+ * metrics, page zoom or device pixel ratio change (the track's vertical
+ * position depends on the native control's line box, not on this stylesheet). */
 .dshcb-range {
+  --dshcb-range-track-height: 4px;
+  --dshcb-range-thumb-size: 14px;
   appearance: none;
   -webkit-appearance: none;
   flex: none;
@@ -654,12 +684,16 @@ ${active} :is([data-slot="settings.section"], [data-slot="settings.header"], [da
   margin: 0;
   background: transparent;
   cursor: pointer;
+  /* Collapse the native line box so the track cannot be pushed off-centre by
+   * the inherited font size. */
+  line-height: 0;
 }
 .dshcb-range:disabled {
   cursor: default;
 }
 .dshcb-range::-webkit-slider-runnable-track {
-  height: 4px;
+  box-sizing: border-box;
+  height: var(--dshcb-range-track-height);
   border: 0.5px solid var(--dsw-alias-border-l1);
   border-radius: 999px;
   background: var(--dsw-alias-bg-module-platform);
@@ -667,9 +701,9 @@ ${active} :is([data-slot="settings.section"], [data-slot="settings.header"], [da
 .dshcb-range::-webkit-slider-thumb {
   appearance: none;
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
-  margin-top: -50.5px;
+  width: var(--dshcb-range-thumb-size);
+  height: var(--dshcb-range-thumb-size);
+  margin-top: calc((var(--dshcb-range-track-height) - var(--dshcb-range-thumb-size)) / 2);
   border: 0;
   border-radius: 50%;
   background: var(--dsw-alias-brand-primary);
@@ -678,14 +712,15 @@ ${active} :is([data-slot="settings.section"], [data-slot="settings.header"], [da
   background: var(--dsw-alias-state-idle-primary, #a2a4a6);
 }
 .dshcb-range::-moz-range-track {
-  height: 4px;
+  box-sizing: border-box;
+  height: var(--dshcb-range-track-height);
   border: 0.5px solid var(--dsw-alias-border-l1);
   border-radius: 999px;
   background: var(--dsw-alias-bg-module-platform);
 }
 .dshcb-range::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: var(--dshcb-range-thumb-size);
+  height: var(--dshcb-range-thumb-size);
   border: 0;
   border-radius: 50%;
   background: var(--dsw-alias-brand-primary);
@@ -696,6 +731,21 @@ ${active} :is([data-slot="settings.section"], [data-slot="settings.header"], [da
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   text-align: right;
+}
+
+/* Narrow settings panels: stack the control module under the copy instead of
+ * letting the two columns fight for room. The module keeps its own layout, so
+ * nothing moves between devices — only its position changes. */
+@media (max-width: 640px) {
+  .dshcb-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dshcb-control {
+    justify-content: flex-start;
+  }
+  .dshcb-rotation-controls {
+    width: 100%;
+  }
 }
 
 /* ---- task progress bar --------------------------------------------------- */
