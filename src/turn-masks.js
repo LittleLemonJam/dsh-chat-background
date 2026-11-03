@@ -28,8 +28,15 @@ const SCRIM_CLASS = 'dshcb-turn-scrim'
 /** Preferred vertical padding of one card. */
 const PADDING = 10
 
+/** Extra upward bleed on every card. The user prompt bubble sits a couple of
+ * pixels above its flow item's box (rounded corners and the row's own
+ * alignment), so a card drawn at the measured top leaves the bubble's top edge
+ * outside the veil. Extending the top edge a little covers it. */
+const TOP_BLEED = 6
+
 /** Smallest wallpaper gap kept between two neighbouring cards. With the
- * comfortable turn spacing below this leaves a ~20px strip of wallpaper. */
+ * comfortable turn spacing below this leaves a ~14px strip of wallpaper after
+ * the top bleed. */
 const MIN_GAP = 20
 
 /** Horizontal growth of one card beyond the reading column, per side. The
@@ -264,12 +271,14 @@ function refresh() {
 
   const live = new Set()
   for (const card of cards) {
-    /* Keep the first card inside the reading column: when the window is
-     * scrolled into the middle of a turn its measured top can be negative, and
-     * the card must not paint over the session header above the column. */
-    const rawTop = Math.round(card.top)
+    /* Extend the top edge a few pixels beyond the measured flow item so the
+     * prompt bubble's own top edge (which sits slightly above the item box)
+     * stays inside the veil. Keep the first card inside the reading column:
+     * when the window is scrolled into the middle of a turn its measured top
+     * can be negative, and the card must not paint over the session header. */
+    const rawTop = Math.round(card.top) - TOP_BLEED
     const top = Math.max(0, rawTop)
-    const height = Math.max(0, Math.round(card.height) - (top - rawTop))
+    const height = Math.max(0, Math.round(card.height) + TOP_BLEED - (top - rawTop))
     const key = card.key
     live.add(key)
     let element = scrims.get(key)

@@ -793,6 +793,7 @@
   var LAYER_CLASS = "dshcb-turn-scrims";
   var SCRIM_CLASS = "dshcb-turn-scrim";
   var PADDING = 10;
+  var TOP_BLEED = 6;
   var MIN_GAP = 20;
   var SIDE_PADDING = 24;
   var TURN_GAP = 28;
@@ -946,9 +947,9 @@
     cardLayer.style.width = cardWidth + "px";
     const live = /* @__PURE__ */ new Set();
     for (const card of cards) {
-      const rawTop = Math.round(card.top);
+      const rawTop = Math.round(card.top) - TOP_BLEED;
       const top = Math.max(0, rawTop);
-      const height = Math.max(0, Math.round(card.height) - (top - rawTop));
+      const height = Math.max(0, Math.round(card.height) + TOP_BLEED - (top - rawTop));
       const key = card.key;
       live.add(key);
       let element = scrims.get(key);
@@ -2778,6 +2779,11 @@ ${active} [${READ_COLUMN_ATTRIBUTE}] {
   overflow: visible;
   pointer-events: none;
   z-index: -1;
+  /* The host's flow-gap rule targets every direct child of the flow, including
+   * this layer; without the reset the whole layer (and every card in it) sits
+   * one flow gap below the reading column top, leaving prompt bubbles outside
+   * the veil. */
+  margin: 0 !important;
 }
 .dshcb-turn-scrim {
   position: absolute;

@@ -238,6 +238,11 @@ ${active} [${READ_COLUMN_ATTRIBUTE}] {
   overflow: visible;
   pointer-events: none;
   z-index: -1;
+  /* The host's flow-gap rule targets every direct child of the flow, including
+   * this layer; without the reset the whole layer (and every card in it) sits
+   * one flow gap below the reading column top, leaving prompt bubbles outside
+   * the veil. */
+  margin: 0 !important;
 }
 .dshcb-turn-scrim {
   position: absolute;

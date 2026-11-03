@@ -31,8 +31,12 @@
       "expr": "(() => { const items = [...document.querySelectorAll('#dshcb-test-flow > [data-chat-turn]')]; if (items.length !== 6) return false; const gap = (item) => item.style.getPropertyValue('--dsh-chat-flow-gap'); return gap(items[0]) === '' && gap(items[1]) === '' && gap(items[2]) === '28px' && gap(items[3]) === '' && gap(items[4]) === '28px' && gap(items[5]) === ''; })()"
     },
     {
-      "check": "cards keep a wallpaper strip of about 20px between two turns",
-      "expr": "(() => { const cards = [...document.querySelectorAll('.dshcb-turn-scrim')].map((card) => card.getBoundingClientRect()).sort((a, b) => a.top - b.top); if (cards.length !== 3) return false; let ok = true; for (let index = 1; index < cards.length; index += 1) { const gap = cards[index].top - cards[index - 1].bottom; if (gap < 18 || gap > 24) ok = false; } return ok; })()"
+      "check": "the card layer ignores the host flow-gap margin and starts at the flow top",
+      "expr": "(() => { const layer = document.querySelector('.dshcb-turn-scrims'); const flow = document.querySelector('#dshcb-test-flow'); if (layer === null || flow === null) return false; const layerRect = layer.getBoundingClientRect(); const flowRect = flow.getBoundingClientRect(); return layer.offsetTop === 0 && Math.abs(layerRect.top - flowRect.top) <= 1; })()"
+    },
+    {
+      "check": "cards keep a wallpaper strip of about 14px between two turns and the top edge covers the prompt",
+      "expr": "(() => { const cards = [...document.querySelectorAll('.dshcb-turn-scrim')].map((card) => card.getBoundingClientRect()).sort((a, b) => a.top - b.top); if (cards.length !== 3) return false; let ok = true; for (let index = 1; index < cards.length; index += 1) { const gap = cards[index].top - cards[index - 1].bottom; if (gap < 12 || gap > 16) ok = false; } const items = [...document.querySelectorAll('#dshcb-test-flow > [data-chat-turn]')]; const firsts = [items[2], items[4]]; return ok && firsts.every((item, index) => cards[index + 1].top <= item.getBoundingClientRect().top - 5); })()"
     },
     {
       "check": "the card of one turn covers both the prompt and the reply",
