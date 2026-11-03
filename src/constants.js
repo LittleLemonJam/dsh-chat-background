@@ -87,6 +87,9 @@ export const RIGHT_PANEL_ATTRIBUTE = 'data-dsh-chat-background-right-panel'
 /** Present only while that panel is expanded to the full-window preview. */
 export const RIGHT_PANEL_FULL_ATTRIBUTE = 'data-dsh-chat-background-right-panel-full'
 
+/** Marks the centered conversation reading column that owns the turn scrims. */
+export const READ_COLUMN_ATTRIBUTE = 'data-dsh-chat-background-read-column'
+
 /** Marks the layout frame whose grid columns shrink when the right sidebar toggles. */
 export const LAYOUT_FRAME_ATTRIBUTE = 'data-dsh-chat-background-frame'
 

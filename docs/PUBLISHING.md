@@ -6,7 +6,7 @@
 
 ```bash
 npm run verify        # 格式 + 构建一致性 + 静态检查 + 单元测试
-npm run test:e2e      # 10 个端到端套件（需要本机 DSH）
+npm run test:e2e      # 11 个端到端套件（需要本机 DSH）
 npm pack --dry-run    # 确认 tarball 内容
 ```
 

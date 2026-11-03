@@ -24,6 +24,7 @@ import {
   RIGHT_FULLSCREEN_ATTRIBUTE,
   RIGHT_PANEL_ATTRIBUTE,
   RIGHT_PANEL_FULL_ATTRIBUTE,
+  READ_COLUMN_ATTRIBUTE,
   SIDEBAR_COLUMN_ATTRIBUTE,
   STRIP_ATTRIBUTE,
   TOKEN_NODE_ATTRIBUTE
@@ -221,13 +222,28 @@ ${active} [class*="sidebarCol"]::before {
   background: var(--dsh-chat-background-scrim-left);
 }
 
-/* Main conversation column scrim. */
-${active} [${MAIN_COLUMN_ATTRIBUTE}]::after {
-  content: "";
+/* The reading-area veil is painted per conversation turn by the turn-mask
+ * layer (src/turn-masks.js), not as one rectangle over the whole centre
+ * column: the wallpaper stays visible between two turns while every turn —
+ * prompt and reply — still reads as one card. The layer lives inside the
+ * reading column so its width follows that column's drag handle. */
+${active} [${READ_COLUMN_ATTRIBUTE}] {
+  position: relative !important;
+  isolation: isolate !important;
+}
+.dshcb-turn-scrims {
   position: absolute;
-  inset: 0;
-  z-index: -1;
+  top: 0;
+  height: 0;
+  overflow: visible;
   pointer-events: none;
+  z-index: -1;
+}
+.dshcb-turn-scrim {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  border-radius: var(--dsw-radius-lg, 12px);
   background: var(--dsh-chat-background-scrim-main);
 }
 
@@ -323,8 +339,8 @@ ${active} body > span[style*="dsw-specific-sidebar-fill"] {
     background-image: none !important;
   }
   ${active} [${SIDEBAR_COLUMN_ATTRIBUTE}]::before,
-  ${active} [${MAIN_COLUMN_ATTRIBUTE}]::after,
-  ${active} [${RIGHT_COLUMN_ATTRIBUTE}]::after {
+  ${active} [${RIGHT_COLUMN_ATTRIBUTE}]::after,
+  ${active} .dshcb-turn-scrims {
     display: none;
   }
 }
@@ -338,8 +354,8 @@ ${active} body > span[style*="dsw-specific-sidebar-fill"] {
     background-image: none !important;
   }
   ${active} [${SIDEBAR_COLUMN_ATTRIBUTE}]::before,
-  ${active} [${MAIN_COLUMN_ATTRIBUTE}]::after,
-  ${active} [${RIGHT_COLUMN_ATTRIBUTE}]::after {
+  ${active} [${RIGHT_COLUMN_ATTRIBUTE}]::after,
+  ${active} .dshcb-turn-scrims {
     display: none;
   }
 }

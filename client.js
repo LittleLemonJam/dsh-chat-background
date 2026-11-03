@@ -40,6 +40,7 @@
   var RIGHT_COLUMN_ATTRIBUTE = "data-dsh-chat-background-right";
   var RIGHT_PANEL_ATTRIBUTE = "data-dsh-chat-background-right-panel";
   var RIGHT_PANEL_FULL_ATTRIBUTE = "data-dsh-chat-background-right-panel-full";
+  var READ_COLUMN_ATTRIBUTE = "data-dsh-chat-background-read-column";
   var LAYOUT_FRAME_ATTRIBUTE = "data-dsh-chat-background-frame";
   var FRAME_ANIMATING_ATTRIBUTE = "data-dsh-chat-background-frame-animating";
   var RIGHT_FULLSCREEN_ATTRIBUTE = "data-dsh-chat-background-right-fullscreen";
@@ -762,24 +763,230 @@
     return element;
   }
 
+  // src/lib/turn-masks.js
+  function groupTurnRanges(items) {
+    const groups = [];
+    const byKey = /* @__PURE__ */ new Map();
+    for (const item of items) {
+      if (typeof item.turn !== "string" || item.turn === "") continue;
+      if (!(item.bottom > item.top)) continue;
+      const existing = byKey.get(item.turn);
+      if (existing === void 0) {
+        const group = { key: item.turn, top: item.top, bottom: item.bottom };
+        byKey.set(item.turn, group);
+        groups.push(group);
+      } else {
+        if (item.top < existing.top) existing.top = item.top;
+        if (item.bottom > existing.bottom) existing.bottom = item.bottom;
+      }
+    }
+    groups.sort((left, right) => left.top - right.top);
+    return groups;
+  }
+  function sidePadding(gap, padding, minGap) {
+    if (!Number.isFinite(gap)) return padding;
+    if (gap <= 0) return 0;
+    return Math.max(0, Math.min(padding, (gap - minGap) / 2));
+  }
+  function computeTurnCards(ranges, options = {}) {
+    const padding = options.padding ?? 10;
+    const minGap = options.minGap ?? 6;
+    return ranges.map((range, index) => {
+      const previous = ranges[index - 1];
+      const next = ranges[index + 1];
+      const gapAbove = previous === void 0 ? Infinity : range.top - previous.bottom;
+      const gapBelow = next === void 0 ? Infinity : next.top - range.bottom;
+      const padTop = sidePadding(gapAbove, padding, minGap);
+      const padBottom = sidePadding(gapBelow, padding, minGap);
+      return {
+        key: range.key,
+        top: range.top - padTop,
+        height: Math.max(0, range.bottom - range.top + padTop + padBottom)
+      };
+    });
+  }
+
+  // src/turn-masks.js
+  var FLOW_SELECTOR = '[data-slot="conversation.chat.flow"]';
+  var ITEM_SELECTOR = "[data-chat-turn]";
+  var LAYER_CLASS = "dshcb-turn-scrims";
+  var SCRIM_CLASS = "dshcb-turn-scrim";
+  var PADDING = 10;
+  var MIN_GAP = 6;
+  var column = null;
+  var layer = null;
+  var resizeObserver = null;
+  var frame = 0;
+  var scrims = /* @__PURE__ */ new Map();
+  var applied = /* @__PURE__ */ new Map();
+  var lastReport = "";
+  function findFlow() {
+    for (const flow of document.querySelectorAll(FLOW_SELECTOR)) {
+      if (flow.querySelector(ITEM_SELECTOR) === null) continue;
+      if (flow.getClientRects().length === 0 && getComputedStyle(flow).display !== "contents") continue;
+      return flow;
+    }
+    return null;
+  }
+  function findColumn(flow) {
+    let element = flow;
+    while (element !== null && element !== document.body) {
+      const style = getComputedStyle(element);
+      if (style.position === "fixed") return null;
+      if (style.display !== "contents" && element.clientWidth > 0 && element.clientHeight > 0) return element;
+      element = element.parentElement;
+    }
+    return null;
+  }
+  function disposeLayer() {
+    resizeObserver?.disconnect();
+    resizeObserver = null;
+    layer?.remove();
+    layer = null;
+    if (column !== null) column.removeAttribute(READ_COLUMN_ATTRIBUTE);
+    column = null;
+    scrims.clear();
+    applied.clear();
+  }
+  function ensureLayer(nextColumn) {
+    if (column !== nextColumn) {
+      disposeLayer();
+      column = nextColumn;
+      column.setAttribute(READ_COLUMN_ATTRIBUTE, "");
+    }
+    if (layer === null || !layer.isConnected) {
+      layer = document.createElement("div");
+      layer.className = LAYER_CLASS;
+      layer.setAttribute("aria-hidden", "true");
+      column.appendChild(layer);
+    }
+    if (resizeObserver === null && typeof ResizeObserver !== "undefined" && column !== null) {
+      resizeObserver = new ResizeObserver(() => {
+        scheduleTurnMaskUpdate();
+      });
+      resizeObserver.observe(column);
+    }
+    if (layer.parentElement !== column) column.appendChild(layer);
+    return layer;
+  }
+  function refresh() {
+    frame = 0;
+    if (!document.documentElement.hasAttribute(ACTIVE_ATTRIBUTE)) {
+      disposeLayer();
+      recordTurnMaskDiagnostics({ active: false });
+      return;
+    }
+    const flow = findFlow();
+    const nextColumn = flow === null ? null : findColumn(flow);
+    if (nextColumn === null) {
+      disposeLayer();
+      recordTurnMaskDiagnostics({ active: true, column: false, turns: 0 });
+      return;
+    }
+    const cardLayer = ensureLayer(nextColumn);
+    const style = getComputedStyle(nextColumn);
+    const paddingLeft = Number.parseFloat(style.paddingLeft) || 0;
+    const paddingRight = Number.parseFloat(style.paddingRight) || 0;
+    const borderLeft = Number.parseFloat(style.borderLeftWidth) || 0;
+    const borderTop = Number.parseFloat(style.borderTopWidth) || 0;
+    const rect = nextColumn.getBoundingClientRect();
+    const scrollTop = nextColumn.scrollTop || 0;
+    const scrollLeft = nextColumn.scrollLeft || 0;
+    const originTop = rect.top + borderTop - scrollTop;
+    const originLeft = rect.left + borderLeft - scrollLeft;
+    const contentWidth = Math.max(0, nextColumn.clientWidth - paddingLeft - paddingRight);
+    const ranges = [];
+    for (const item of flow.querySelectorAll(ITEM_SELECTOR)) {
+      if (item.closest("[hidden]") !== null) continue;
+      const itemRect = item.getBoundingClientRect();
+      if (itemRect.width <= 0 || itemRect.height <= 0) continue;
+      ranges.push({
+        turn: item.getAttribute("data-chat-turn") ?? "",
+        top: itemRect.top - originTop,
+        bottom: itemRect.bottom - originTop
+      });
+    }
+    const cards = computeTurnCards(groupTurnRanges(ranges), { padding: PADDING, minGap: MIN_GAP });
+    cardLayer.style.left = paddingLeft + "px";
+    cardLayer.style.width = contentWidth + "px";
+    const live = /* @__PURE__ */ new Set();
+    for (const card of cards) {
+      const top = Math.round(card.top);
+      const height = Math.max(0, Math.round(card.height));
+      const key = card.key;
+      live.add(key);
+      let element = scrims.get(key);
+      if (element === void 0) {
+        element = document.createElement("div");
+        element.className = SCRIM_CLASS;
+        element.setAttribute("data-turn", key);
+        cardLayer.appendChild(element);
+        scrims.set(key, element);
+        applied.delete(key);
+      }
+      const previous = applied.get(key);
+      if (previous === void 0 || previous.top !== top || previous.height !== height) {
+        element.style.top = top + "px";
+        element.style.height = height + "px";
+        applied.set(key, { top, height });
+      }
+    }
+    for (const [key, element] of scrims) {
+      if (live.has(key)) continue;
+      element.remove();
+      scrims.delete(key);
+      applied.delete(key);
+    }
+    recordTurnMaskDiagnostics({ active: true, column: true, turns: cards.length, width: Math.round(contentWidth) });
+  }
+  function recordTurnMaskDiagnostics(value) {
+    const next = JSON.stringify(value);
+    if (next === lastReport) return;
+    lastReport = next;
+    recordDiagnostics({ turnMasks: value });
+  }
+  function scheduleTurnMaskUpdate() {
+    if (frame !== 0) return;
+    if (typeof window.requestAnimationFrame !== "function") {
+      refresh();
+      return;
+    }
+    frame = window.requestAnimationFrame(refresh);
+  }
+  function updateTurnMasks() {
+    if (frame !== 0) {
+      window.cancelAnimationFrame(frame);
+      frame = 0;
+    }
+    refresh();
+  }
+  function teardownTurnMasks() {
+    if (frame !== 0) {
+      window.cancelAnimationFrame(frame);
+      frame = 0;
+    }
+    disposeLayer();
+    recordTurnMaskDiagnostics({ active: false });
+  }
+
   // src/background.js
   function ensureBackgroundLayer(name) {
     if (document.body === null || name === null) return null;
-    let layer2 = document.querySelector("[" + BACKGROUND_LAYER_ATTRIBUTE + "]");
-    if (layer2 === null || layer2.tagName !== "IMG") {
-      layer2?.remove();
-      layer2 = document.createElement("img");
-      layer2.className = "dshcb-background-layer";
-      layer2.setAttribute(BACKGROUND_LAYER_ATTRIBUTE, "");
-      layer2.setAttribute("aria-hidden", "true");
-      layer2.setAttribute("alt", "");
-      layer2.setAttribute("decoding", "async");
-      layer2.setAttribute("draggable", "false");
-      document.body.appendChild(layer2);
+    let layer3 = document.querySelector("[" + BACKGROUND_LAYER_ATTRIBUTE + "]");
+    if (layer3 === null || layer3.tagName !== "IMG") {
+      layer3?.remove();
+      layer3 = document.createElement("img");
+      layer3.className = "dshcb-background-layer";
+      layer3.setAttribute(BACKGROUND_LAYER_ATTRIBUTE, "");
+      layer3.setAttribute("aria-hidden", "true");
+      layer3.setAttribute("alt", "");
+      layer3.setAttribute("decoding", "async");
+      layer3.setAttribute("draggable", "false");
+      document.body.appendChild(layer3);
     }
     const src = FILE_URL + encodeURIComponent(name);
-    if (layer2.getAttribute("src") !== src) layer2.setAttribute("src", src);
-    return layer2;
+    if (layer3.getAttribute("src") !== src) layer3.setAttribute("src", src);
+    return layer3;
   }
   function removeBackgroundLayer() {
     for (const element of document.querySelectorAll("[" + BACKGROUND_LAYER_ATTRIBUTE + "]")) element.remove();
@@ -815,7 +1022,7 @@
   function readRightScrim() {
     return readRegionScrim(SCRIM_RIGHT_KEY, VEIL_KEY, VEIL_DEFAULT);
   }
-  function layer(alpha) {
+  function layer2(alpha) {
     const rgb = isDark() ? "9,11,15" : "250,250,250";
     const value = (alpha / 100).toFixed(3);
     return `linear-gradient(rgba(${rgb},${value}), rgba(${rgb},${value}))`;
@@ -860,16 +1067,16 @@
   }
   function markColumn(attribute, slotName) {
     const outlet = document.querySelector(`[data-slot="${slotName}"]`);
-    const column = outlet === null ? null : outlet.parentElement;
-    if (column !== null && !column.hasAttribute(attribute)) column.setAttribute(attribute, "");
+    const column2 = outlet === null ? null : outlet.parentElement;
+    if (column2 !== null && !column2.hasAttribute(attribute)) column2.setAttribute(attribute, "");
   }
   function clearColumn(attribute) {
     for (const element of document.querySelectorAll(`[${attribute}]`)) element.removeAttribute(attribute);
   }
   function markSidebarColumn() {
     const outlet = document.querySelector('[data-slot="sidebar"]');
-    const column = outlet === null ? null : outlet.parentElement;
-    if (column !== null) column.setAttribute(SIDEBAR_COLUMN_ATTRIBUTE, "");
+    const column2 = outlet === null ? null : outlet.parentElement;
+    if (column2 !== null) column2.setAttribute(SIDEBAR_COLUMN_ATTRIBUTE, "");
   }
   function markMainColumn() {
     markColumn(MAIN_COLUMN_ATTRIBUTE, "main");
@@ -936,7 +1143,7 @@
       observedPanel = null;
     }
     const outlet = document.querySelector('[data-slot="rightbar"]');
-    const column = outlet === null ? null : outlet.parentElement;
+    const column2 = outlet === null ? null : outlet.parentElement;
     const panel = outlet === null ? null : outlet.querySelector('[class*="panel"]');
     const root = document.documentElement;
     const labelFull = hasExitFullscreenControl();
@@ -966,12 +1173,12 @@
         element.removeAttribute(RIGHT_PANEL_FULL_ATTRIBUTE);
     };
     setFull(panel);
-    if (column !== null) setFull(column);
+    if (column2 !== null) setFull(column2);
     if (full) {
       const leftOutlet = document.querySelector('[data-slot="sidebar"]');
       const leftColumn = leftOutlet === null ? null : leftOutlet.parentElement;
       const leftWidth = leftColumn === null ? 0 : leftColumn.getBoundingClientRect().width;
-      const columnLeft = column === null ? 0 : column.getBoundingClientRect().left;
+      const columnLeft = column2 === null ? 0 : column2.getBoundingClientRect().left;
       const offset = Math.round(leftWidth - columnLeft);
       const width = Math.round(window.innerWidth - leftWidth);
       root.style.setProperty("--dsh-chat-background-full-left", offset + "px");
@@ -984,15 +1191,15 @@
   }
   function animateLayoutFrame() {
     const outlet = document.querySelector('[data-slot="main"]');
-    const column = outlet === null ? null : outlet.parentElement;
-    const frame = column === null ? null : column.parentElement;
-    if (frame === null) return;
+    const column2 = outlet === null ? null : outlet.parentElement;
+    const frame2 = column2 === null ? null : column2.parentElement;
+    if (frame2 === null) return;
     const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
-    if (!reduced) frame.setAttribute(FRAME_ANIMATING_ATTRIBUTE, "");
+    if (!reduced) frame2.setAttribute(FRAME_ANIMATING_ATTRIBUTE, "");
     if (frameAnimTimer !== 0) window.clearTimeout(frameAnimTimer);
     frameAnimTimer = window.setTimeout(() => {
       frameAnimTimer = 0;
-      frame.removeAttribute(FRAME_ANIMATING_ATTRIBUTE);
+      frame2.removeAttribute(FRAME_ANIMATING_ATTRIBUTE);
     }, 340);
   }
   function installRightbarGestures() {
@@ -1052,9 +1259,9 @@
   }
   function markLayoutFrame() {
     const outlet = document.querySelector('[data-slot="main"]');
-    const column = outlet === null ? null : outlet.parentElement;
-    const frame = column === null ? null : column.parentElement;
-    if (frame !== null && !frame.hasAttribute(LAYOUT_FRAME_ATTRIBUTE)) frame.setAttribute(LAYOUT_FRAME_ATTRIBUTE, "");
+    const column2 = outlet === null ? null : outlet.parentElement;
+    const frame2 = column2 === null ? null : column2.parentElement;
+    if (frame2 !== null && !frame2.hasAttribute(LAYOUT_FRAME_ATTRIBUTE)) frame2.setAttribute(LAYOUT_FRAME_ATTRIBUTE, "");
   }
   function markRegionColumns() {
     markSidebarColumn();
@@ -1112,7 +1319,7 @@
     if (candidates.length > 0) syncDynamicRules([candidates[0]]);
     return candidates;
   }
-  var applied = { selection: void 0, dark: null, scrimLeft: null, scrimMain: null, scrimRight: null };
+  var applied2 = { selection: void 0, dark: null, scrimLeft: null, scrimMain: null, scrimRight: null };
   var markSignature = -1;
   var markContainer = null;
   var flushHandle = 0;
@@ -1128,7 +1335,7 @@
     const container = conversationContainer();
     const painters = markedPainters();
     const needsPaint = signature !== markSignature || container !== markContainer || painters.length === 0;
-    const sameVars = applied.selection === next && applied.dark === dark && applied.scrimLeft === scrimLeft && applied.scrimMain === scrimMain && applied.scrimRight === scrimRight;
+    const sameVars = applied2.selection === next && applied2.dark === dark && applied2.scrimLeft === scrimLeft && applied2.scrimMain === scrimMain && applied2.scrimRight === scrimRight;
     if (next === null) {
       if (sameVars && !root.hasAttribute(ACTIVE_ATTRIBUTE)) return;
       for (const property of INLINE_PROPERTIES) root.style.removeProperty(property);
@@ -1140,8 +1347,9 @@
       clearPainters();
       clearRegionColumns();
       syncDynamicRules([]);
+      teardownTurnMasks();
       nudgeNativeTitlebar(false);
-      applied = { selection: null, dark, scrimLeft, scrimMain, scrimRight };
+      applied2 = { selection: null, dark, scrimLeft, scrimMain, scrimRight };
       markSignature = -1;
       markContainer = null;
       recordDiagnostics({ background: { active: false } });
@@ -1171,13 +1379,14 @@
     });
     if (!sameVars) {
       root.style.setProperty("--dsh-chat-background-image", 'url("' + FILE_URL + encodeURIComponent(next) + '")');
-      root.style.setProperty("--dsh-chat-background-scrim-left", layer(scrimLeft));
-      root.style.setProperty("--dsh-chat-background-scrim-main", layer(scrimMain));
-      root.style.setProperty("--dsh-chat-background-scrim-right", layer(scrimRight));
+      root.style.setProperty("--dsh-chat-background-scrim-left", layer2(scrimLeft));
+      root.style.setProperty("--dsh-chat-background-scrim-main", layer2(scrimMain));
+      root.style.setProperty("--dsh-chat-background-scrim-right", layer2(scrimRight));
       root.setAttribute(ACTIVE_ATTRIBUTE, next);
-      applied = { selection: next, dark, scrimLeft, scrimMain, scrimRight };
+      applied2 = { selection: next, dark, scrimLeft, scrimMain, scrimRight };
       nudgeNativeTitlebar(true);
     }
+    updateTurnMasks();
   }
   function flushBackground() {
     if (flushHandle !== 0) return;
@@ -1186,6 +1395,7 @@
       applyBackground(readSelection());
       renderComposerStrip();
       renderTokenTotal();
+      updateTurnMasks();
     };
     if (typeof window.requestAnimationFrame === "function") {
       flushIsTimeout = false;
@@ -1229,6 +1439,7 @@
     clearPainters();
     clearRegionColumns();
     syncDynamicRules([]);
+    teardownTurnMasks();
     document.querySelector(`style[data-plugin-css=${cssString(DYNAMIC_TAG_ID)}]`)?.remove();
     document.querySelector(`[${STRIP_ATTRIBUTE}]`)?.remove();
     document.querySelector(`[${TOKEN_NODE_ATTRIBUTE}]`)?.remove();
@@ -1236,7 +1447,7 @@
     cachedContainer = null;
     markSignature = -1;
     markContainer = null;
-    applied = { selection: void 0, dark: null, scrimLeft: null, scrimMain: null, scrimRight: null };
+    applied2 = { selection: void 0, dark: null, scrimLeft: null, scrimMain: null, scrimRight: null };
   }
 
   // src/lib/zoom.js
@@ -1468,7 +1679,7 @@
   }
 
   // src/rotation.js
-  var LAYER_CLASS = "dshcb-rotate-layer";
+  var LAYER_CLASS2 = "dshcb-rotate-layer";
   var timer = 0;
   var layerTimers = [];
   var request = null;
@@ -1527,45 +1738,45 @@
     return document.body?.hasAttribute("data-ds-dark-theme") === true ? "rgb(9, 11, 15)" : "rgb(250, 250, 250)";
   }
   function createImageLayer(name) {
-    const layer2 = document.createElement("img");
-    layer2.className = LAYER_CLASS;
-    layer2.setAttribute(ROTATION_LAYER_ATTRIBUTE, "");
-    layer2.setAttribute("aria-hidden", "true");
-    layer2.setAttribute("alt", "");
-    layer2.setAttribute("draggable", "false");
-    layer2.src = FILE_URL + encodeURIComponent(name);
-    document.body.appendChild(layer2);
-    return layer2;
+    const layer3 = document.createElement("img");
+    layer3.className = LAYER_CLASS2;
+    layer3.setAttribute(ROTATION_LAYER_ATTRIBUTE, "");
+    layer3.setAttribute("aria-hidden", "true");
+    layer3.setAttribute("alt", "");
+    layer3.setAttribute("draggable", "false");
+    layer3.src = FILE_URL + encodeURIComponent(name);
+    document.body.appendChild(layer3);
+    return layer3;
   }
   function createColorLayer(color) {
-    const layer2 = document.createElement("div");
-    layer2.className = LAYER_CLASS;
-    layer2.setAttribute(ROTATION_LAYER_ATTRIBUTE, "");
-    layer2.setAttribute("aria-hidden", "true");
-    layer2.style.background = color;
-    document.body.appendChild(layer2);
-    return layer2;
+    const layer3 = document.createElement("div");
+    layer3.className = LAYER_CLASS2;
+    layer3.setAttribute(ROTATION_LAYER_ATTRIBUTE, "");
+    layer3.setAttribute("aria-hidden", "true");
+    layer3.style.background = color;
+    document.body.appendChild(layer3);
+    return layer3;
   }
   function fadeTransition(previous, next, duration) {
-    const layer2 = createImageLayer(previous);
-    layer2.style.opacity = "1";
+    const layer3 = createImageLayer(previous);
+    layer3.style.opacity = "1";
     commit(next);
-    void layer2.offsetWidth;
-    layer2.style.transition = `opacity ${String(duration)}s ease`;
-    layer2.style.opacity = "0";
+    void layer3.offsetWidth;
+    layer3.style.transition = `opacity ${String(duration)}s ease`;
+    layer3.style.opacity = "0";
     scheduleLayer(removeLayer, duration * 1e3 + 80);
   }
   function fadeThroughTransition(previous, next, duration) {
     const half = Math.max(40, duration * 1e3 / 2);
-    const layer2 = createColorLayer(themeBaseColour());
-    layer2.style.opacity = "0";
-    void layer2.offsetWidth;
-    layer2.style.transition = `opacity ${String(half / 1e3)}s ease`;
-    layer2.style.opacity = "1";
+    const layer3 = createColorLayer(themeBaseColour());
+    layer3.style.opacity = "0";
+    void layer3.offsetWidth;
+    layer3.style.transition = `opacity ${String(half / 1e3)}s ease`;
+    layer3.style.opacity = "1";
     scheduleLayer(() => {
       commit(next);
-      layer2.style.transition = `opacity ${String(half / 1e3)}s ease`;
-      layer2.style.opacity = "0";
+      layer3.style.transition = `opacity ${String(half / 1e3)}s ease`;
+      layer3.style.opacity = "0";
       scheduleLayer(removeLayer, half + 80);
     }, half);
     void previous;
@@ -2509,13 +2720,28 @@ ${active} [class*="sidebarCol"]::before {
   background: var(--dsh-chat-background-scrim-left);
 }
 
-/* Main conversation column scrim. */
-${active} [${MAIN_COLUMN_ATTRIBUTE}]::after {
-  content: "";
+/* The reading-area veil is painted per conversation turn by the turn-mask
+ * layer (src/turn-masks.js), not as one rectangle over the whole centre
+ * column: the wallpaper stays visible between two turns while every turn —
+ * prompt and reply — still reads as one card. The layer lives inside the
+ * reading column so its width follows that column's drag handle. */
+${active} [${READ_COLUMN_ATTRIBUTE}] {
+  position: relative !important;
+  isolation: isolate !important;
+}
+.dshcb-turn-scrims {
   position: absolute;
-  inset: 0;
-  z-index: -1;
+  top: 0;
+  height: 0;
+  overflow: visible;
   pointer-events: none;
+  z-index: -1;
+}
+.dshcb-turn-scrim {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  border-radius: var(--dsw-radius-lg, 12px);
   background: var(--dsh-chat-background-scrim-main);
 }
 
@@ -2611,8 +2837,8 @@ ${active} body > span[style*="dsw-specific-sidebar-fill"] {
     background-image: none !important;
   }
   ${active} [${SIDEBAR_COLUMN_ATTRIBUTE}]::before,
-  ${active} [${MAIN_COLUMN_ATTRIBUTE}]::after,
-  ${active} [${RIGHT_COLUMN_ATTRIBUTE}]::after {
+  ${active} [${RIGHT_COLUMN_ATTRIBUTE}]::after,
+  ${active} .dshcb-turn-scrims {
     display: none;
   }
 }
@@ -2626,8 +2852,8 @@ ${active} body > span[style*="dsw-specific-sidebar-fill"] {
     background-image: none !important;
   }
   ${active} [${SIDEBAR_COLUMN_ATTRIBUTE}]::before,
-  ${active} [${MAIN_COLUMN_ATTRIBUTE}]::after,
-  ${active} [${RIGHT_COLUMN_ATTRIBUTE}]::after {
+  ${active} [${RIGHT_COLUMN_ATTRIBUTE}]::after,
+  ${active} .dshcb-turn-scrims {
     display: none;
   }
 }

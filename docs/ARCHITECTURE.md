@@ -122,6 +122,9 @@ composer 包装层 ResizeObserver（纯样式尺寸） ──┘        ├─ a
 - **UI**标签：背景条、进度条、Token 三组设置各用一张 `1px` 细边框 + 大圆角卡片包住，组内两行之间用默认分隔线。
 - 右栏 panel 通过 `markRightPanel()` 打标：普通状态由右栏列的 `::after` 画遮罩（随列宽收缩）；全屏时**左侧栏保持可见**，只隐藏主窗口列，panel 用 offset/width 变量从左侧栏右缘开始覆盖「主窗口 + 原右栏」并绘制统一遮罩；布局 frame 通过 `markLayoutFrame()` 打标，仅在展开/收起点击的 340ms 窗口内启用 300ms `grid-template-columns` 过渡（与 app 内容动画同步），拖动宽度时不启用过渡。
 - 三个遮罩层没有开关，只有 0–100 的不透明度：0 全透明、100 完全不透明；侧栏/右栏的表面始终让位于图片，由遮罩决定遮挡程度。
+- **主窗口遮罩按对话轮次绘制**：不再给整个主窗口列铺一层，而是由 `src/turn-masks.js` 读取 `[data-chat-turn]`，把同一轮的用户消息与回复合成一张绝对定位的卡片，
+  宽度等于阅读列宽（跟随阅读列拖拽手柄自动变化），轮次之间保留壁纸缝；卡片只写 `top/height`，不影响会话布局。几何计算在
+  `src/lib/turn-masks.js`，有单元测试覆盖；DOM 线程只在布局变化时重算。
 
 - 左侧栏/主窗口/右侧栏由稳定槽位（`[data-slot="sidebar"]`、`[data-slot="main"]`、`[data-slot="rightbar"]`）的父节点打标，
   各自建立 `position: relative` + `isolation: isolate` 的层叠上下文，再用 `::before`/`::after` 在 `z-index: -1` 画独立遮罩；

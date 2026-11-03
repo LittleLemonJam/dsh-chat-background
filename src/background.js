@@ -47,6 +47,7 @@ import { cssColorToHex } from './lib/color.js'
 import { renderComposerStrip } from './strip.js'
 import { renderTokenTotal } from './token-total.js'
 import { readPercent, readSelection } from './storage.js'
+import { teardownTurnMasks, updateTurnMasks } from './turn-masks.js'
 
 /**
  * Ensure the fixed background layer exists. An element background animates
@@ -641,6 +642,7 @@ export function applyBackground(selection) {
     clearPainters()
     clearRegionColumns()
     syncDynamicRules([])
+    teardownTurnMasks()
     nudgeNativeTitlebar(false)
     applied = { selection: null, dark, scrimLeft, scrimMain, scrimRight }
     markSignature = -1
@@ -688,6 +690,9 @@ export function applyBackground(selection) {
     applied = { selection: next, dark, scrimLeft, scrimMain, scrimRight }
     nudgeNativeTitlebar(true)
   }
+  /* The per-turn veils are measured from the live flow; refresh them whenever
+   * the selection or the layout is re-applied. */
+  updateTurnMasks()
 }
 
 /**
@@ -705,6 +710,10 @@ export function flushBackground() {
      * applyBackground wrote nothing, so this read does not force a reflow. */
     renderComposerStrip()
     renderTokenTotal()
+    /* The per-turn veils follow the conversation flow; the resize observer on
+     * the reading column covers pure-layout changes, this pass covers DOM
+     * rebuilds (session switches, new nodes). */
+    updateTurnMasks()
   }
   if (typeof window.requestAnimationFrame === 'function') {
     flushIsTimeout = false
@@ -767,6 +776,7 @@ export function invalidatePainters() {
   clearPainters()
   clearRegionColumns()
   syncDynamicRules([])
+  teardownTurnMasks()
   document.querySelector(`style[data-plugin-css=${cssString(DYNAMIC_TAG_ID)}]`)?.remove()
   document.querySelector(`[${STRIP_ATTRIBUTE}]`)?.remove()
   document.querySelector(`[${TOKEN_NODE_ATTRIBUTE}]`)?.remove()
