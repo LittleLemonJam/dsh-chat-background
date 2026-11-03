@@ -11,9 +11,10 @@
 
 ## What it does
 
-Pick a few pictures, put them in the background folder, and the chat window gets a wallpaper. Keep one image fixed
-or rotate through a group of favourites; tune the left sidebar, main window and right sidebar scrims separately so
-text stays readable. The plugin also adds a bar under the input, a task progress bar and a total token usage line.
+Pick a few pictures, put them in the background folder (default `~/.dsh/backgrounds/`, created automatically if
+missing), and the chat window gets a wallpaper. Keep one image fixed or rotate through a group of favourites; tune the
+left sidebar, main window and right sidebar scrims separately so text stays readable. The plugin also adds a bar under
+the input, a task progress bar and a total token usage line.
 
 ## Features
 
@@ -68,10 +69,11 @@ The npm package tracks the GitHub release (currently `1.0.0`); either channel wo
 
 4. Restart DSH.
 
-### Add backgrounds
+### Where pictures go
 
-Put images in `~/.dsh/backgrounds/` (or point `DSH_BACKGROUNDS_DIR` elsewhere), then open
-**Settings → Page settings → Background** and press **Rescan**, or **Open folder**.
+Pictures live in `~/.dsh/backgrounds/` (`C:\Users\<you>\.dsh\backgrounds\` on Windows; set `DSH_BACKGROUNDS_DIR` to use
+another folder). **You do not need to create the folder first** — opening the settings page or pressing **Open folder**
+creates it automatically. Drop images in, then press **Rescan** under **Settings → Page settings → Background**.
 
 ## Usage
 
