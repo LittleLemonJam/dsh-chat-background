@@ -28,8 +28,15 @@ const SCRIM_CLASS = 'dshcb-turn-scrim'
 /** Preferred vertical padding of one card. */
 const PADDING = 10
 
-/** Smallest wallpaper gap kept between two neighbouring cards. */
-const MIN_GAP = 6
+/** Smallest wallpaper gap kept between two neighbouring cards (the host only
+ * leaves 6–12px between flow items, so this is what makes the turn split read
+ * as two cards instead of one). */
+const MIN_GAP = 12
+
+/** Horizontal growth of one card beyond the reading column, per side. The
+ * extra width becomes whitespace between the text and the card edge; 24px is
+ * exactly the reading column's side clearance (where the width handles live). */
+const SIDE_PADDING = 24
 
 /** @type {Element | null} */
 let column = null
@@ -178,8 +185,13 @@ function refresh() {
   }
   const cards = computeTurnCards(groupTurnRanges(ranges), { padding: PADDING, minGap: MIN_GAP })
 
-  cardLayer.style.left = paddingLeft + 'px'
-  cardLayer.style.width = contentWidth + 'px'
+  /* The card is wider than the reading column by SIDE_PADDING on each side:
+   * the extra width is inner whitespace, so text never touches the rounded
+   * edge and the card reaches the width-handle clearance. */
+  const cardLeft = paddingLeft - SIDE_PADDING
+  const cardWidth = contentWidth + SIDE_PADDING * 2
+  cardLayer.style.left = cardLeft + 'px'
+  cardLayer.style.width = cardWidth + 'px'
 
   const live = new Set()
   for (const card of cards) {
@@ -213,7 +225,13 @@ function refresh() {
     scrims.delete(key)
     applied.delete(key)
   }
-  recordTurnMaskDiagnostics({ active: true, column: true, turns: cards.length, width: Math.round(contentWidth) })
+  recordTurnMaskDiagnostics({
+    active: true,
+    column: true,
+    turns: cards.length,
+    width: Math.round(cardWidth),
+    textWidth: Math.round(contentWidth)
+  })
 }
 
 /**

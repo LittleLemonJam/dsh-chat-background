@@ -812,7 +812,8 @@
   var LAYER_CLASS = "dshcb-turn-scrims";
   var SCRIM_CLASS = "dshcb-turn-scrim";
   var PADDING = 10;
-  var MIN_GAP = 6;
+  var MIN_GAP = 12;
+  var SIDE_PADDING = 24;
   var column = null;
   var layer = null;
   var resizeObserver = null;
@@ -917,8 +918,10 @@
       });
     }
     const cards = computeTurnCards(groupTurnRanges(ranges), { padding: PADDING, minGap: MIN_GAP });
-    cardLayer.style.left = paddingLeft + "px";
-    cardLayer.style.width = contentWidth + "px";
+    const cardLeft = paddingLeft - SIDE_PADDING;
+    const cardWidth = contentWidth + SIDE_PADDING * 2;
+    cardLayer.style.left = cardLeft + "px";
+    cardLayer.style.width = cardWidth + "px";
     const live = /* @__PURE__ */ new Set();
     for (const card of cards) {
       const rawTop = Math.round(card.top);
@@ -948,7 +951,13 @@
       scrims.delete(key);
       applied.delete(key);
     }
-    recordTurnMaskDiagnostics({ active: true, column: true, turns: cards.length, width: Math.round(contentWidth) });
+    recordTurnMaskDiagnostics({
+      active: true,
+      column: true,
+      turns: cards.length,
+      width: Math.round(cardWidth),
+      textWidth: Math.round(contentWidth)
+    });
   }
   function recordTurnMaskDiagnostics(value) {
     const next = JSON.stringify(value);

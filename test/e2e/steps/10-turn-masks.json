@@ -21,8 +21,8 @@
       "expr": "(() => document.querySelectorAll('.dshcb-turn-scrim').length === 3)()"
     },
     {
-      "check": "each card spans the reading column width and uses the main scrim",
-      "expr": "(() => { const flow = document.querySelector('#dshcb-test-flow'); const layer = document.querySelector('.dshcb-turn-scrims'); if (flow === null || layer === null) return false; const width = Math.round(flow.getBoundingClientRect().width); const cards = [...document.querySelectorAll('.dshcb-turn-scrim')]; return cards.every((card) => { const rect = card.getBoundingClientRect(); const style = getComputedStyle(card); return Math.abs(rect.width - width) <= 1 && Math.abs(layer.getBoundingClientRect().left - flow.getBoundingClientRect().left) <= 1 && style.borderRadius !== '0px' && style.backgroundImage.includes('linear-gradient'); }); })()"
+      "check": "each card is the reading column plus its side whitespace and uses the main scrim",
+      "expr": "(() => { const flow = document.querySelector('#dshcb-test-flow'); const layer = document.querySelector('.dshcb-turn-scrims'); if (flow === null || layer === null) return false; const flowRect = flow.getBoundingClientRect(); const expected = Math.round(flowRect.width) + 48; const cards = [...document.querySelectorAll('.dshcb-turn-scrim')]; const layerRect = layer.getBoundingClientRect(); return cards.every((card) => { const rect = card.getBoundingClientRect(); const style = getComputedStyle(card); return Math.abs(rect.width - expected) <= 1 && Math.abs(layerRect.left - (flowRect.left - 24)) <= 1 && style.borderRadius !== '0px' && style.backgroundImage.includes('linear-gradient'); }); })()"
     },
     {
       "check": "cards keep a wallpaper gap between two turns",
