@@ -73,6 +73,38 @@ dsh plugin --profile desktop add dsh-chat-background@1.1.0
 > npm 页面上的 README 是发布时 tarball 的快照，发布后再改 README 不会回写 npm 页面，
 > 下次发版时才会同步；以 GitHub 仓库的 README 为准。
 
+### 3.1 pnpm 观察期（minimumReleaseAge）
+
+DSH 插件页的安装走 profile 里的 pnpm；pnpm 11 默认 `minimumReleaseAge = 1440` 分钟，即
+**npm 发布后 24 小时**内，`dsh plugin add dsh-chat-background`（不带版本）不会解析到最新版，
+而是装上满足观察期的最新旧版本。实测：1.1.0 发布约 12 小时后，在隔离 profile 里安装，
+`dsh-chat-background` 装到的是 1.0.0。
+
+- 观察期从 npm registry 的发布时间算（`npm view dsh-chat-background time --json`）；
+- 精确版本 `dsh plugin add dsh-chat-background@1.1.0` **不受**该限制，可以立即安装
+  （DSH 安装界面也会提示“卸载后安装精确版本”）；
+- 本机也可以在 profile 的 `pnpm-workspace.yaml` 里用
+  `minimumReleaseAgeExclude: ["dsh-chat-background@1.1.0"]` 放行单个版本，或改
+  `minimumReleaseAge`（不推荐）；
+- 插件市场的一键安装是不带版本的，因此发布后 24 小时内用户一键安装拿到的仍是旧版，
+  这是 pnpm 供应链安全策略的预期行为，不是发布失败。
+
+### 3.2 发布后验证（每次发版必做）
+
+1. 记录发布时间并确认观察期：
+   ```bash
+   node scripts/release-check.mjs
+   ```
+   输出当前版本的 `published`、`age`、`due`（观察期结束时间）和是否已通过。
+2. 在 `due` 时间之后（建议 +10 分钟）安排一次会话提醒（`schedule_create`），到点执行：
+   ```bash
+   DSH_CLI="<dsh.cmd 路径>" node scripts/release-check.mjs --install
+   ```
+   该命令会在隔离 profile 里执行一次与插件页相同的“不带版本”安装：
+   - 输出 `unpinned install: <版本> (latest)` 且退出码 0 → 用户已能一键装到新版；
+   - 仍显示旧版本 → 观察期未到或 profile 配了 exclude，记录剩余时间并稍后再查。
+3. 把结果回报后再结束本次发版；确认可用后，市场/插件页的一键安装即视为验证通过。
+
 ## 4. 提交 DSH 插件市场
 
 DSH 0.2.x 的插件市场会扫描 GitHub 上的公开 DSH 插件；收录要求：

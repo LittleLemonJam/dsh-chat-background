@@ -76,6 +76,7 @@
     "format:check": "prettier --check .",
     "check": "node scripts/check.mjs",
     "check:install": "node scripts/check-install.mjs --profile desktop",
+    "check:release": "node scripts/release-check.mjs",
     "test:unit": "node --test \"test/unit/*.test.mjs\"",
     "test:e2e": "node scripts/e2e/run.mjs",
     "test": "npm run build && npm run check && npm run test:unit",
