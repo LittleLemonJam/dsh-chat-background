@@ -27,12 +27,15 @@ import {
   RIGHT_FULLSCREEN_ATTRIBUTE,
   RIGHT_PANEL_FULL_ATTRIBUTE,
   SCRIM_DEFAULT,
+  SCRIM_FOLLOW_THEME_KEY,
   SCRIM_KEY,
   SCRIM_LEFT_KEY,
   SCRIM_MAIN_KEY,
   SCRIM_MAX,
   SCRIM_MIN,
   SCRIM_RIGHT_KEY,
+  SCRIM_WINDOW_DEFAULT,
+  SCRIM_WINDOW_KEY,
   SIDEBAR_COLUMN_ATTRIBUTE,
   STRIP_ATTRIBUTE,
   TOKEN_NODE_ATTRIBUTE,
@@ -44,9 +47,10 @@ import {
 import { recordDiagnostics } from './diagnostics.js'
 import { isFullscreenPanel } from './lib/layout.js'
 import { cssColorToHex } from './lib/color.js'
+import { followThemeFromStorage, scrimThemeKey } from './lib/scrims.js'
 import { renderComposerStrip } from './strip.js'
 import { renderTokenTotal } from './token-total.js'
-import { readPercent, readSelection } from './storage.js'
+import { readPercent, readSelection, readString, writeString } from './storage.js'
 import { teardownTurnMasks, updateTurnMasks } from './turn-masks.js'
 
 /**
@@ -105,6 +109,27 @@ export function isDark() {
   return baseSurfaceIsDark() === true
 }
 
+/** Whether the user keeps separate scrim values for the light and dark themes. */
+export function readScrimFollowTheme() {
+  return followThemeFromStorage(readString(SCRIM_FOLLOW_THEME_KEY))
+}
+
+/**
+ * One scrim percentage, honouring the theme-scoped value when the user enabled
+ * separate light/dark settings. The base key is the fallback, so enabling the
+ * switch never changes what is on screen until the user edits one theme.
+ * @param baseKey - unscoped storage key.
+ * @param fallback - value used when neither key is stored.
+ * @param minimum - inclusive lower bound.
+ * @param maximum - inclusive upper bound.
+ * @returns the clamped percentage.
+ */
+function readScrimValue(baseKey, fallback, minimum, maximum) {
+  const base = readPercent(baseKey, fallback, minimum, maximum)
+  if (!readScrimFollowTheme()) return base
+  return readPercent(scrimThemeKey(baseKey, isDark()), base, minimum, maximum)
+}
+
 /**
  * One region scrim, falling back to the matching 1.4.x key while the user has
  * not moved the new slider yet.
@@ -115,7 +140,7 @@ export function isDark() {
  */
 function readRegionScrim(key, legacyKey, legacyDefault) {
   const legacy = readPercent(legacyKey, legacyDefault, VEIL_MIN, VEIL_MAX)
-  return readPercent(key, legacy, SCRIM_MIN, SCRIM_MAX)
+  return readScrimValue(key, legacy, SCRIM_MIN, SCRIM_MAX)
 }
 
 /** Left sidebar scrim percentage. */
@@ -123,14 +148,62 @@ export function readLeftScrim() {
   return readRegionScrim(SCRIM_LEFT_KEY, VEIL_KEY, VEIL_DEFAULT)
 }
 
-/** Main conversation column scrim percentage. */
+/** Text-card scrim percentage (one card per conversation turn). */
 export function readMainScrim() {
   return readRegionScrim(SCRIM_MAIN_KEY, SCRIM_KEY, SCRIM_DEFAULT)
+}
+
+/** Whole main-window scrim percentage. */
+export function readWindowScrim() {
+  return readScrimValue(SCRIM_WINDOW_KEY, SCRIM_WINDOW_DEFAULT, SCRIM_MIN, SCRIM_MAX)
 }
 
 /** Right sidebar scrim percentage. */
 export function readRightScrim() {
   return readRegionScrim(SCRIM_RIGHT_KEY, VEIL_KEY, VEIL_DEFAULT)
+}
+
+/**
+ * A scrim slider reads the value the current theme should show.
+ * @param baseKey - unscoped storage key.
+ * @param fallback - default percentage.
+ * @param minimum - inclusive lower bound.
+ * @param maximum - inclusive upper bound.
+ * @returns the clamped percentage.
+ */
+export function readScrimSlider(baseKey, fallback, minimum, maximum) {
+  return readScrimValue(baseKey, fallback, minimum, maximum)
+}
+
+/**
+ * Store one scrim slider value in the key the current mode expects: the
+ * theme-scoped key while separate values are enabled, the base key otherwise.
+ * @param baseKey - unscoped storage key.
+ * @param value - clamped percentage.
+ */
+export function writeScrimSlider(baseKey, value) {
+  if (readScrimFollowTheme()) writeString(scrimThemeKey(baseKey, isDark()), String(value))
+  else writeString(baseKey, String(value))
+}
+
+/**
+ * Copy the current theme's effective values into the base keys. Called when the
+ * follow-theme switch is turned off, so the visible scrims do not jump back to
+ * an older shared value.
+ */
+export function flattenScrimTheme() {
+  const dark = isDark()
+  const specs = [
+    [SCRIM_LEFT_KEY, readPercent(VEIL_KEY, VEIL_DEFAULT, VEIL_MIN, VEIL_MAX)],
+    [SCRIM_MAIN_KEY, readPercent(SCRIM_KEY, SCRIM_DEFAULT, SCRIM_MIN, SCRIM_MAX)],
+    [SCRIM_WINDOW_KEY, SCRIM_WINDOW_DEFAULT],
+    [SCRIM_RIGHT_KEY, readPercent(VEIL_KEY, VEIL_DEFAULT, VEIL_MIN, VEIL_MAX)]
+  ]
+  for (const [key, fallback] of specs) {
+    const base = readPercent(key, fallback, SCRIM_MIN, SCRIM_MAX)
+    const themed = readPercent(scrimThemeKey(key, dark), base, SCRIM_MIN, SCRIM_MAX)
+    writeString(key, String(themed))
+  }
 }
 
 /**
@@ -593,7 +666,14 @@ function markPainters() {
 /* ---- application --------------------------------------------------------- */
 
 /** Last value written for each document-level setting. */
-let applied = { selection: undefined, dark: null, scrimLeft: null, scrimMain: null, scrimRight: null }
+let applied = {
+  selection: undefined,
+  dark: null,
+  scrimLeft: null,
+  scrimMain: null,
+  scrimWindow: null,
+  scrimRight: null
+}
 
 /** Slot count at the last measurement; -1 forces the next one. */
 let markSignature = -1
@@ -619,6 +699,7 @@ export function applyBackground(selection) {
   const dark = isDark()
   const scrimLeft = readLeftScrim()
   const scrimMain = readMainScrim()
+  const scrimWindow = readWindowScrim()
   const scrimRight = readRightScrim()
   const signature = document.querySelectorAll('[data-slot]').length
   const container = conversationContainer()
@@ -629,6 +710,7 @@ export function applyBackground(selection) {
     applied.dark === dark &&
     applied.scrimLeft === scrimLeft &&
     applied.scrimMain === scrimMain &&
+    applied.scrimWindow === scrimWindow &&
     applied.scrimRight === scrimRight
 
   if (next === null) {
@@ -644,7 +726,7 @@ export function applyBackground(selection) {
     syncDynamicRules([])
     teardownTurnMasks()
     nudgeNativeTitlebar(false)
-    applied = { selection: null, dark, scrimLeft, scrimMain, scrimRight }
+    applied = { selection: null, dark, scrimLeft, scrimMain, scrimWindow, scrimRight }
     markSignature = -1
     markContainer = null
     recordDiagnostics({ background: { active: false } })
@@ -670,7 +752,7 @@ export function applyBackground(selection) {
       painted: markedPainters().length,
       conversation: container !== null,
       dark,
-      scrim: { left: scrimLeft, main: scrimMain, right: scrimRight },
+      scrim: { left: scrimLeft, main: scrimMain, window: scrimWindow, right: scrimRight },
       markers: {
         rightPanel: document.querySelector('[' + RIGHT_PANEL_ATTRIBUTE + ']') !== null,
         layoutFrame: document.querySelector('[' + LAYOUT_FRAME_ATTRIBUTE + ']') !== null,
@@ -683,11 +765,12 @@ export function applyBackground(selection) {
     root.style.setProperty('--dsh-chat-background-image', 'url("' + FILE_URL + encodeURIComponent(next) + '")')
     root.style.setProperty('--dsh-chat-background-scrim-left', layer(scrimLeft))
     root.style.setProperty('--dsh-chat-background-scrim-main', layer(scrimMain))
+    root.style.setProperty('--dsh-chat-background-scrim-window', layer(scrimWindow))
     root.style.setProperty('--dsh-chat-background-scrim-right', layer(scrimRight))
     root.setAttribute(ACTIVE_ATTRIBUTE, next)
     /* Sidebar and right-bar surfaces always yield to the image; the left/right
      * scrim sliders decide how much of it remains visible (100 = opaque). */
-    applied = { selection: next, dark, scrimLeft, scrimMain, scrimRight }
+    applied = { selection: next, dark, scrimLeft, scrimMain, scrimWindow, scrimRight }
     nudgeNativeTitlebar(true)
   }
   /* The per-turn veils are measured from the live flow; refresh them whenever
@@ -784,5 +867,12 @@ export function invalidatePainters() {
   cachedContainer = null
   markSignature = -1
   markContainer = null
-  applied = { selection: undefined, dark: null, scrimLeft: null, scrimMain: null, scrimRight: null }
+  applied = {
+    selection: undefined,
+    dark: null,
+    scrimLeft: null,
+    scrimMain: null,
+    scrimWindow: null,
+    scrimRight: null
+  }
 }

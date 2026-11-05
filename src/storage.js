@@ -1,10 +1,11 @@
 /**
  * Durable storage and the two reusable setting factories.
  *
- * `'off'` is the stored off state of every switch, and an absent key means on,
- * so a switch costs nothing until it is turned off. Listeners exist because the
- * settings row and whatever the switch drives (an injected element, the
- * background layer) mount at different times.
+ * `'off'` is the stored off state of the default-on switches, and an absent key
+ * means on, so such a switch costs nothing until it is turned off. Opt-in
+ * switches store `'on'` instead and are off while absent. Listeners exist
+ * because the settings row and whatever the switch drives (an injected element,
+ * the background layer) mount at different times.
  *
  * Reads are memoised: the mutation-driven flush reads several keys per frame
  * while a session streams, and `localStorage` is synchronous. The cache is
@@ -115,15 +116,17 @@ export function readSelection() {
 
 /**
  * One durable on/off switch.
- * @param {{ key: string, onChange?: (next: boolean) => void }} options - storage
- *   key, plus an optional side effect to run on change.
+ * @param {{ key: string, onChange?: (next: boolean) => void, defaultEnabled?: boolean }} options -
+ *   storage key, an optional side effect to run on change, and whether an
+ *   absent key means on (the historical default) or off (opt-in switches).
  * @returns reader, writer and the React hook for that switch.
  */
-export function createSwitch({ key, onChange }) {
+export function createSwitch({ key, onChange, defaultEnabled = true }) {
   const listeners = new Set()
-  const read = () => readString(key) !== 'off'
+  const read = () => (defaultEnabled ? readString(key) !== 'off' : readString(key) === 'on')
   const write = (next) => {
-    writeString(key, next ? null : 'off')
+    if (defaultEnabled) writeString(key, next ? null : 'off')
+    else writeString(key, next ? 'on' : null)
     if (typeof onChange === 'function') onChange(next)
     for (const listener of listeners) listener(next)
   }

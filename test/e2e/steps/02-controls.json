@@ -136,18 +136,73 @@
       "log": "sliders: 0–100 per-region scrim values and CSS variables"
     },
     {
-      "eval": "window.__dshcbTest.range('左侧栏遮罩层', 100); window.__dshcbTest.range('主窗口遮罩层', 0); window.__dshcbTest.range('右侧栏遮罩层', 55)"
+      "eval": "window.__dshcbTest.range('左侧栏遮罩层', 100); window.__dshcbTest.range('主窗口遮罩层', 40); window.__dshcbTest.range('文字框遮罩层', 0); window.__dshcbTest.range('右侧栏遮罩层', 55)"
     },
     {
       "wait": 600
     },
     {
       "check": "region sliders store 0–100 values and publish independent CSS variables",
-      "expr": "(() => { const root = document.documentElement.style; const left = window.localStorage.getItem('dsh-chat-background:scrim-left'); const main = window.localStorage.getItem('dsh-chat-background:scrim-main'); const right = window.localStorage.getItem('dsh-chat-background:scrim-right'); return left === '100' && main === '0' && right === '55' && root.getPropertyValue('--dsh-chat-background-scrim-left').includes('1.000') && root.getPropertyValue('--dsh-chat-background-scrim-main').includes('0.000') && root.getPropertyValue('--dsh-chat-background-scrim-right').includes('0.550'); })()"
+      "expr": "(() => { const root = document.documentElement.style; const left = window.localStorage.getItem('dsh-chat-background:scrim-left'); const main = window.localStorage.getItem('dsh-chat-background:scrim-main'); const windowValue = window.localStorage.getItem('dsh-chat-background:scrim-window'); const right = window.localStorage.getItem('dsh-chat-background:scrim-right'); return left === '100' && main === '0' && windowValue === '40' && right === '55' && root.getPropertyValue('--dsh-chat-background-scrim-left').includes('1.000') && root.getPropertyValue('--dsh-chat-background-scrim-main').includes('0.000') && root.getPropertyValue('--dsh-chat-background-scrim-window').includes('0.400') && root.getPropertyValue('--dsh-chat-background-scrim-right').includes('0.550'); })()"
     },
     {
-      "check": "sidebar and right regions paint their own scrim; the main column leaves the veil to the per-turn cards",
-      "expr": "(() => {\n  const column = (slot) => {\n    const outlet = document.querySelector('[data-slot=\"' + slot + '\"]')\n    return outlet === null ? null : outlet.parentElement\n  }\n  const left = column('sidebar')\n  const main = column('main')\n  const right = column('rightbar')\n  if (left === null || main === null || right === null) return 'MISSING COLUMN'\n  const leftBg = getComputedStyle(left, '::before').backgroundImage\n  const mainBg = getComputedStyle(main, '::after').backgroundImage\n  const rightBg = getComputedStyle(right, '::after').backgroundImage\n  return leftBg.includes('rgb(250, 250, 250)') && mainBg === 'none' && rightBg.includes('0.55')\n})()"
+      "check": "sidebar, window and right regions paint their own scrims; the text card veil is per turn",
+      "expr": "(() => { const column = (slot) => { const outlet = document.querySelector('[data-slot=\"' + slot + '\"]'); return outlet === null ? null : outlet.parentElement }; const left = column('sidebar'); const main = column('main'); const right = column('rightbar'); if (left === null || main === null || right === null) return 'MISSING COLUMN'; const leftBg = getComputedStyle(left, '::before').backgroundImage; const mainBg = getComputedStyle(main, '::after').backgroundImage; const rightBg = getComputedStyle(right, '::after').backgroundImage; return leftBg.includes('rgb(250, 250, 250)') && mainBg.includes('0.4') && rightBg.includes('0.55'); })()"
+    },
+    {
+      "log": "theme-scoped scrims: keep separate light/dark values"
+    },
+    {
+      "eval": "window.__dshcbTest.toggle('遮罩层设置跟随深浅色')"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "check": "the follow-theme switch persists as an opt-in",
+      "expr": "window.localStorage.getItem('dsh-chat-background:scrim-follow-theme') === 'on'"
+    },
+    {
+      "eval": "window.__dshcbTest.range('左侧栏遮罩层', 20)"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "eval": "document.body.setAttribute('data-ds-dark-theme', '')"
+    },
+    {
+      "wait": 900
+    },
+    {
+      "eval": "window.__dshcbTest.range('左侧栏遮罩层', 80)"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "check": "the light and dark themes keep their own scrim values",
+      "expr": "(() => { const light = window.localStorage.getItem('dsh-chat-background:scrim-left:light'); const dark = window.localStorage.getItem('dsh-chat-background:scrim-left:dark'); const alpha = document.documentElement.style.getPropertyValue('--dsh-chat-background-scrim-left'); return light === '20' && dark === '80' && alpha.includes('0.800'); })()"
+    },
+    {
+      "eval": "document.body.removeAttribute('data-ds-dark-theme')"
+    },
+    {
+      "wait": 900
+    },
+    {
+      "check": "switching back to the light theme restores its own value",
+      "expr": "(() => { const alpha = document.documentElement.style.getPropertyValue('--dsh-chat-background-scrim-left'); return alpha.includes('0.200'); })()"
+    },
+    {
+      "eval": "window.__dshcbTest.toggle('遮罩层设置跟随深浅色')"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "check": "turning the switch off flattens the current theme into the shared value",
+      "expr": "(() => { const base = window.localStorage.getItem('dsh-chat-background:scrim-left'); const alpha = document.documentElement.style.getPropertyValue('--dsh-chat-background-scrim-left'); return base === '20' && alpha.includes('0.200') && window.localStorage.getItem('dsh-chat-background:scrim-follow-theme') === null; })()"
     },
     {
       "clickText": "UI"

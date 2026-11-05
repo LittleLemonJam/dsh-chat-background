@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Chat Background",
-    "description": "Background image, sidebar veil, composer strip, task progress bar and all-session token total for the DSH Web GUI."
+    "description": "Background image, four scrim layers (optionally with separate light/dark values), composer strip, task progress bar and all-session token total for the DSH Web GUI."
   }
 }

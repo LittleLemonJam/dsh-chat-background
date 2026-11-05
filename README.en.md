@@ -13,7 +13,7 @@
 
 Pick a few pictures, put them in the background folder (default `~/.dsh/backgrounds/`, created automatically if
 missing), and the chat window gets a wallpaper. Keep one image fixed or rotate through a group of favourites; tune the
-left sidebar, main window and right sidebar scrims separately so text stays readable. The plugin also adds a bar under
+left sidebar, main window, text card and right sidebar scrims separately (optionally with separate light/dark values) so text stays readable. The plugin also adds a bar under
 the input, a task progress bar and a total token usage line.
 
 ## Features
@@ -24,7 +24,7 @@ the input, a task progress bar and a total token usage line.
 | Rotation        | Keep one image fixed or rotate automatically every 5–300 seconds                                                                                                     |
 | Transition      | Fade, fade-through or none; duration 0–3 seconds                                                                                                                     |
 | Rotation group  | Rotate only checked images; thumbnails, a five-row scrollable list and drag reordering that never changes on selection                                               |
-| Column scrims   | Independent 0–100 opacity for the left sidebar, main window and right sidebar                                                                                        |
+| Four scrims     | Independent 0–100 opacity for the left sidebar, main window, text card and right sidebar; optional separate light/dark values                                        |
 | Composer bar    | A bar as wide as the input wrapping the usage row, with a configurable colour                                                                                        |
 | Task progress   | Todo completion when available, a step estimate while running, hidden when idle                                                                                      |
 | Total tokens    | All-session (archived included) token usage above the account row, adjustable font size                                                                              |

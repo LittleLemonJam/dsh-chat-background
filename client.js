@@ -27,6 +27,8 @@
   var SCRIM_LEFT_KEY = "dsh-chat-background:scrim-left";
   var SCRIM_MAIN_KEY = "dsh-chat-background:scrim-main";
   var SCRIM_RIGHT_KEY = "dsh-chat-background:scrim-right";
+  var SCRIM_WINDOW_KEY = "dsh-chat-background:scrim-window";
+  var SCRIM_FOLLOW_THEME_KEY = "dsh-chat-background:scrim-follow-theme";
   var STRIP_KEY = "dsh-chat-background:strip";
   var STRIP_COLOR_KEY = "dsh-chat-background:strip-color";
   var PROGRESS_KEY = "dsh-chat-background:progress";
@@ -54,6 +56,7 @@
     "--dsh-chat-background-image",
     "--dsh-chat-background-scrim-left",
     "--dsh-chat-background-scrim-main",
+    "--dsh-chat-background-scrim-window",
     "--dsh-chat-background-scrim-right",
     "--dsh-chat-strip-bg",
     "--dsh-progress-color",
@@ -61,6 +64,7 @@
   ];
   var SCRIM_MIN = 0;
   var SCRIM_MAX = 100;
+  var SCRIM_WINDOW_DEFAULT = 0;
   var SCRIM_DEFAULT = 58;
   var VEIL_MIN = 0;
   var VEIL_MAX = 90;
@@ -117,6 +121,14 @@
     if (parts === null) return null;
     const channel = (text) => Number.parseInt(text, 10).toString(16).padStart(2, "0");
     return `#${channel(parts[1])}${channel(parts[2])}${channel(parts[3])}`;
+  }
+
+  // src/lib/scrims.js
+  function scrimThemeKey(baseKey, dark) {
+    return `${baseKey}${dark ? ":dark" : ":light"}`;
+  }
+  function followThemeFromStorage(raw) {
+    return raw === "on";
   }
 
   // src/settings.js
@@ -356,8 +368,11 @@
     openFailed: "打开文件夹失败",
     truncated: "图片太多，只显示最近的 {shown} 张",
     scrimLeftTitle: "左侧栏遮罩层",
-    scrimMainTitle: "主窗口遮罩层",
+    scrimWindowTitle: "主窗口遮罩层",
+    scrimTextTitle: "文字框遮罩层",
     scrimRightTitle: "右侧栏遮罩层",
+    scrimFollowTitle: "遮罩层设置跟随深浅色",
+    scrimFollowDescription: "开启后，浅色和深色主题分别保存左侧栏、主窗口、文字框和右侧栏的遮罩值",
     stripTitle: "输入栏下方背景条",
     stripDescription: "在输入栏下方加一条与输入栏等长的背景条，把下面那排用量数据包起来（仅在有背景图时显示）",
     stripColorTitle: "背景条颜色",
@@ -407,8 +422,11 @@
     openFailed: "Could not open the folder",
     truncated: "Too many images; showing the most recent {shown}",
     scrimLeftTitle: "Left sidebar scrim layer",
-    scrimMainTitle: "Main window scrim layer",
+    scrimWindowTitle: "Main window scrim layer",
+    scrimTextTitle: "Text card scrim layer",
     scrimRightTitle: "Right sidebar scrim layer",
+    scrimFollowTitle: "Scrims follow the light/dark theme",
+    scrimFollowDescription: "Keep separate scrim values for the light and dark themes (sidebar, window, text card, right sidebar)",
     stripTitle: "Bar under the input",
     stripDescription: "Adds a bar as wide as the input, wrapping the usage row below it (shown while a background image is set)",
     stripColorTitle: "Bar colour",
@@ -579,11 +597,12 @@
     if (!ACCEPTED_IMAGE_EXTENSIONS.some((extension) => lowered.endsWith(extension))) return null;
     return raw;
   }
-  function createSwitch({ key, onChange }) {
+  function createSwitch({ key, onChange, defaultEnabled = true }) {
     const listeners = /* @__PURE__ */ new Set();
-    const read = () => readString(key) !== "off";
+    const read = () => defaultEnabled ? readString(key) !== "off" : readString(key) === "on";
     const write = (next) => {
-      writeString(key, next ? null : "off");
+      if (defaultEnabled) writeString(key, next ? null : "off");
+      else writeString(key, next ? "on" : null);
       if (typeof onChange === "function") onChange(next);
       for (const listener of listeners) listener(next);
     };
@@ -1052,9 +1071,17 @@
     if (document.body.hasAttribute("data-ds-dark-theme")) return true;
     return baseSurfaceIsDark() === true;
   }
+  function readScrimFollowTheme() {
+    return followThemeFromStorage(readString(SCRIM_FOLLOW_THEME_KEY));
+  }
+  function readScrimValue(baseKey, fallback, minimum, maximum) {
+    const base = readPercent(baseKey, fallback, minimum, maximum);
+    if (!readScrimFollowTheme()) return base;
+    return readPercent(scrimThemeKey(baseKey, isDark()), base, minimum, maximum);
+  }
   function readRegionScrim(key, legacyKey, legacyDefault) {
     const legacy = readPercent(legacyKey, legacyDefault, VEIL_MIN, VEIL_MAX);
-    return readPercent(key, legacy, SCRIM_MIN, SCRIM_MAX);
+    return readScrimValue(key, legacy, SCRIM_MIN, SCRIM_MAX);
   }
   function readLeftScrim() {
     return readRegionScrim(SCRIM_LEFT_KEY, VEIL_KEY, VEIL_DEFAULT);
@@ -1062,8 +1089,32 @@
   function readMainScrim() {
     return readRegionScrim(SCRIM_MAIN_KEY, SCRIM_KEY, SCRIM_DEFAULT);
   }
+  function readWindowScrim() {
+    return readScrimValue(SCRIM_WINDOW_KEY, SCRIM_WINDOW_DEFAULT, SCRIM_MIN, SCRIM_MAX);
+  }
   function readRightScrim() {
     return readRegionScrim(SCRIM_RIGHT_KEY, VEIL_KEY, VEIL_DEFAULT);
+  }
+  function readScrimSlider(baseKey, fallback, minimum, maximum) {
+    return readScrimValue(baseKey, fallback, minimum, maximum);
+  }
+  function writeScrimSlider(baseKey, value) {
+    if (readScrimFollowTheme()) writeString(scrimThemeKey(baseKey, isDark()), String(value));
+    else writeString(baseKey, String(value));
+  }
+  function flattenScrimTheme() {
+    const dark = isDark();
+    const specs = [
+      [SCRIM_LEFT_KEY, readPercent(VEIL_KEY, VEIL_DEFAULT, VEIL_MIN, VEIL_MAX)],
+      [SCRIM_MAIN_KEY, readPercent(SCRIM_KEY, SCRIM_DEFAULT, SCRIM_MIN, SCRIM_MAX)],
+      [SCRIM_WINDOW_KEY, SCRIM_WINDOW_DEFAULT],
+      [SCRIM_RIGHT_KEY, readPercent(VEIL_KEY, VEIL_DEFAULT, VEIL_MIN, VEIL_MAX)]
+    ];
+    for (const [key, fallback] of specs) {
+      const base = readPercent(key, fallback, SCRIM_MIN, SCRIM_MAX);
+      const themed = readPercent(scrimThemeKey(key, dark), base, SCRIM_MIN, SCRIM_MAX);
+      writeString(key, String(themed));
+    }
   }
   function layer2(alpha) {
     const rgb = isDark() ? "9,11,15" : "250,250,250";
@@ -1362,7 +1413,14 @@
     if (candidates.length > 0) syncDynamicRules([candidates[0]]);
     return candidates;
   }
-  var applied2 = { selection: void 0, dark: null, scrimLeft: null, scrimMain: null, scrimRight: null };
+  var applied2 = {
+    selection: void 0,
+    dark: null,
+    scrimLeft: null,
+    scrimMain: null,
+    scrimWindow: null,
+    scrimRight: null
+  };
   var markSignature = -1;
   var markContainer = null;
   var flushHandle = 0;
@@ -1373,12 +1431,13 @@
     const dark = isDark();
     const scrimLeft = readLeftScrim();
     const scrimMain = readMainScrim();
+    const scrimWindow = readWindowScrim();
     const scrimRight = readRightScrim();
     const signature = document.querySelectorAll("[data-slot]").length;
     const container = conversationContainer();
     const painters = markedPainters();
     const needsPaint = signature !== markSignature || container !== markContainer || painters.length === 0;
-    const sameVars = applied2.selection === next && applied2.dark === dark && applied2.scrimLeft === scrimLeft && applied2.scrimMain === scrimMain && applied2.scrimRight === scrimRight;
+    const sameVars = applied2.selection === next && applied2.dark === dark && applied2.scrimLeft === scrimLeft && applied2.scrimMain === scrimMain && applied2.scrimWindow === scrimWindow && applied2.scrimRight === scrimRight;
     if (next === null) {
       if (sameVars && !root.hasAttribute(ACTIVE_ATTRIBUTE)) return;
       for (const property of INLINE_PROPERTIES) root.style.removeProperty(property);
@@ -1392,7 +1451,7 @@
       syncDynamicRules([]);
       teardownTurnMasks();
       nudgeNativeTitlebar(false);
-      applied2 = { selection: null, dark, scrimLeft, scrimMain, scrimRight };
+      applied2 = { selection: null, dark, scrimLeft, scrimMain, scrimWindow, scrimRight };
       markSignature = -1;
       markContainer = null;
       recordDiagnostics({ background: { active: false } });
@@ -1412,7 +1471,7 @@
         painted: markedPainters().length,
         conversation: container !== null,
         dark,
-        scrim: { left: scrimLeft, main: scrimMain, right: scrimRight },
+        scrim: { left: scrimLeft, main: scrimMain, window: scrimWindow, right: scrimRight },
         markers: {
           rightPanel: document.querySelector("[" + RIGHT_PANEL_ATTRIBUTE + "]") !== null,
           layoutFrame: document.querySelector("[" + LAYOUT_FRAME_ATTRIBUTE + "]") !== null,
@@ -1424,9 +1483,10 @@
       root.style.setProperty("--dsh-chat-background-image", 'url("' + FILE_URL + encodeURIComponent(next) + '")');
       root.style.setProperty("--dsh-chat-background-scrim-left", layer2(scrimLeft));
       root.style.setProperty("--dsh-chat-background-scrim-main", layer2(scrimMain));
+      root.style.setProperty("--dsh-chat-background-scrim-window", layer2(scrimWindow));
       root.style.setProperty("--dsh-chat-background-scrim-right", layer2(scrimRight));
       root.setAttribute(ACTIVE_ATTRIBUTE, next);
-      applied2 = { selection: next, dark, scrimLeft, scrimMain, scrimRight };
+      applied2 = { selection: next, dark, scrimLeft, scrimMain, scrimWindow, scrimRight };
       nudgeNativeTitlebar(true);
     }
     updateTurnMasks();
@@ -1490,7 +1550,14 @@
     cachedContainer = null;
     markSignature = -1;
     markContainer = null;
-    applied2 = { selection: void 0, dark: null, scrimLeft: null, scrimMain: null, scrimRight: null };
+    applied2 = {
+      selection: void 0,
+      dark: null,
+      scrimLeft: null,
+      scrimMain: null,
+      scrimWindow: null,
+      scrimRight: null
+    };
   }
 
   // src/lib/zoom.js
@@ -2387,14 +2454,49 @@
       )
     );
   }
-  function ActiveSliderRow({ storageKey, minimum, maximum, fallback, title, description, disabled, unit, after }) {
+  function useScrimTheme() {
+    const follow = settings().switches.scrimTheme.useEnabled();
+    const [dark, setDark] = useState(() => isDark());
+    useEffect(() => {
+      const update = () => setDark(isDark());
+      const observer = new MutationObserver(update);
+      if (document.body !== null) {
+        observer.observe(document.body, { attributes: true, attributeFilter: ["data-ds-dark-theme"] });
+      }
+      const media = window.matchMedia?.("(prefers-color-scheme: dark)");
+      media?.addEventListener?.("change", update);
+      return () => {
+        observer.disconnect();
+        media?.removeEventListener?.("change", update);
+      };
+    }, []);
+    return { follow, dark };
+  }
+  function ActiveSliderRow({
+    storageKey,
+    minimum,
+    maximum,
+    fallback,
+    title,
+    description,
+    disabled,
+    unit,
+    after,
+    scrim = false
+  }) {
     const copy = useCopy();
-    const [value, setValue] = useState(() => readPercent(storageKey, fallback, minimum, maximum));
+    const scrimTheme = useScrimTheme();
+    const readValue = () => scrim ? readScrimSlider(storageKey, fallback, minimum, maximum) : readPercent(storageKey, fallback, minimum, maximum);
+    const [value, setValue] = useState(readValue);
+    useEffect(() => {
+      setValue(readValue());
+    }, [scrimTheme.follow, scrimTheme.dark]);
     const change = (next) => {
       const parsed = Number(next);
       const clamped = Number.isFinite(parsed) ? clampToRange(parsed, minimum, maximum) : value;
       setValue(clamped);
-      writeString(storageKey, String(clamped));
+      if (scrim) writeScrimSlider(storageKey, clamped);
+      else writeString(storageKey, String(clamped));
       if (typeof after === "function") after(clamped);
       else applyBackground(readSelection());
     };
@@ -2424,17 +2526,30 @@
       minimum: SCRIM_MIN,
       maximum: SCRIM_MAX,
       fallback: readPercent(VEIL_KEY, VEIL_DEFAULT, VEIL_MIN, VEIL_MAX),
-      title: copy.scrimLeftTitle
+      title: copy.scrimLeftTitle,
+      scrim: true
     });
   }
-  function ScrimMainRow() {
+  function ScrimWindowRow() {
+    const copy = useCopy();
+    return h(ActiveSliderRow, {
+      storageKey: SCRIM_WINDOW_KEY,
+      minimum: SCRIM_MIN,
+      maximum: SCRIM_MAX,
+      fallback: 0,
+      title: copy.scrimWindowTitle,
+      scrim: true
+    });
+  }
+  function ScrimTextRow() {
     const copy = useCopy();
     return h(ActiveSliderRow, {
       storageKey: SCRIM_MAIN_KEY,
       minimum: SCRIM_MIN,
       maximum: SCRIM_MAX,
       fallback: readPercent(SCRIM_KEY, SCRIM_DEFAULT, SCRIM_MIN, SCRIM_MAX),
-      title: copy.scrimMainTitle
+      title: copy.scrimTextTitle,
+      scrim: true
     });
   }
   function ScrimRightRow() {
@@ -2444,7 +2559,16 @@
       minimum: SCRIM_MIN,
       maximum: SCRIM_MAX,
       fallback: readPercent(VEIL_KEY, VEIL_DEFAULT, VEIL_MIN, VEIL_MAX),
-      title: copy.scrimRightTitle
+      title: copy.scrimRightTitle,
+      scrim: true
+    });
+  }
+  function ScrimFollowRow() {
+    const copy = useCopy();
+    return h(SwitchRow, {
+      setting: settings().switches.scrimTheme,
+      title: copy.scrimFollowTitle,
+      description: copy.scrimFollowDescription
     });
   }
   function StripRow() {
@@ -2508,8 +2632,10 @@
     RotationEffectRow,
     RotationGroupRow,
     ScrimLeftRow,
-    ScrimMainRow,
-    ScrimRightRow
+    ScrimWindowRow,
+    ScrimTextRow,
+    ScrimRightRow,
+    ScrimFollowRow
   ];
   var UI_GROUPS = [
     [StripRow, StripColorRow],
@@ -2763,6 +2889,17 @@ ${active} [class*="sidebarCol"]::before {
   background: var(--dsh-chat-background-scrim-left);
 }
 
+/* Whole main-window veil: covers the reading column and the side clearance
+ * around it, painted behind the per-turn text cards. */
+${active} [${MAIN_COLUMN_ATTRIBUTE}]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--dsh-chat-background-scrim-window);
+}
+
 /* The reading-area veil is painted per conversation turn by the turn-mask
  * layer (src/turn-masks.js), not as one rectangle over the whole centre
  * column: the wallpaper stays visible between two turns while every turn —
@@ -2885,6 +3022,7 @@ ${active} body > span[style*="dsw-specific-sidebar-fill"] {
     background-image: none !important;
   }
   ${active} [${SIDEBAR_COLUMN_ATTRIBUTE}]::before,
+  ${active} [${MAIN_COLUMN_ATTRIBUTE}]::after,
   ${active} [${RIGHT_COLUMN_ATTRIBUTE}]::after,
   ${active} .dshcb-turn-scrims {
     display: none;
@@ -2900,6 +3038,7 @@ ${active} body > span[style*="dsw-specific-sidebar-fill"] {
     background-image: none !important;
   }
   ${active} [${SIDEBAR_COLUMN_ATTRIBUTE}]::before,
+  ${active} [${MAIN_COLUMN_ATTRIBUTE}]::after,
   ${active} [${RIGHT_COLUMN_ATTRIBUTE}]::after,
   ${active} .dshcb-turn-scrims {
     display: none;
@@ -3442,6 +3581,17 @@ ${active} :is([data-slot="settings.section"], [data-slot="settings.header"], [da
             onChange: (next) => {
               if (next) void refreshTokenTotal();
               renderTokenTotal();
+            }
+          }),
+          /* Opt-in: keep one scrim value per theme. Turning it off copies the
+           * current theme's values back to the shared keys so the visible scrims
+           * do not jump. */
+          scrimTheme: createSwitch({
+            key: SCRIM_FOLLOW_THEME_KEY,
+            defaultEnabled: false,
+            onChange: (next) => {
+              if (!next) flattenScrimTheme();
+              applyBackground(readSelection());
             }
           })
         };

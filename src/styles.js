@@ -222,6 +222,17 @@ ${active} [class*="sidebarCol"]::before {
   background: var(--dsh-chat-background-scrim-left);
 }
 
+/* Whole main-window veil: covers the reading column and the side clearance
+ * around it, painted behind the per-turn text cards. */
+${active} [${MAIN_COLUMN_ATTRIBUTE}]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--dsh-chat-background-scrim-window);
+}
+
 /* The reading-area veil is painted per conversation turn by the turn-mask
  * layer (src/turn-masks.js), not as one rectangle over the whole centre
  * column: the wallpaper stays visible between two turns while every turn —
@@ -344,6 +355,7 @@ ${active} body > span[style*="dsw-specific-sidebar-fill"] {
     background-image: none !important;
   }
   ${active} [${SIDEBAR_COLUMN_ATTRIBUTE}]::before,
+  ${active} [${MAIN_COLUMN_ATTRIBUTE}]::after,
   ${active} [${RIGHT_COLUMN_ATTRIBUTE}]::after,
   ${active} .dshcb-turn-scrims {
     display: none;
@@ -359,6 +371,7 @@ ${active} body > span[style*="dsw-specific-sidebar-fill"] {
     background-image: none !important;
   }
   ${active} [${SIDEBAR_COLUMN_ATTRIBUTE}]::before,
+  ${active} [${MAIN_COLUMN_ATTRIBUTE}]::after,
   ${active} [${RIGHT_COLUMN_ATTRIBUTE}]::after,
   ${active} .dshcb-turn-scrims {
     display: none;

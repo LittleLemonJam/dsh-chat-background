@@ -4,6 +4,7 @@
  */
 import {
   applyBackground,
+  flattenScrimTheme,
   flushBackground,
   installRightbarGestures,
   invalidatePainters,
@@ -13,6 +14,7 @@ import {
   LOCALE_NS,
   PROGRESS_DOCK_ORDER,
   PROGRESS_KEY,
+  SCRIM_FOLLOW_THEME_KEY,
   SECTION_ID,
   SECTION_ORDER,
   STRIP_KEY,
@@ -88,6 +90,17 @@ export function createPlugin(require) {
           onChange: (next) => {
             if (next) void refreshTokenTotal()
             renderTokenTotal()
+          }
+        }),
+        /* Opt-in: keep one scrim value per theme. Turning it off copies the
+         * current theme's values back to the shared keys so the visible scrims
+         * do not jump. */
+        scrimTheme: createSwitch({
+          key: SCRIM_FOLLOW_THEME_KEY,
+          defaultEnabled: false,
+          onChange: (next) => {
+            if (!next) flattenScrimTheme()
+            applyBackground(readSelection())
           }
         })
       }

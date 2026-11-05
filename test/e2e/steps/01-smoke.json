@@ -148,7 +148,7 @@
     },
     {
       "check": "Background tab starts with the background block and three scrim rows",
-      "expr": "(() => { const panel = document.querySelector('.dshcb-section .dshcb-tab-panel'); if (panel === null || panel.firstElementChild === null) return false; const titles = [...panel.querySelectorAll('.dshcb-row .dshcb-title')].map((el) => el.innerText.trim()); return panel.firstElementChild.classList.contains('dshcb-background-block') && JSON.stringify(titles) === JSON.stringify(['背景显示方式', '轮换设置', '轮换分组', '左侧栏遮罩层', '主窗口遮罩层', '右侧栏遮罩层']); })()"
+      "expr": "(() => { const panel = document.querySelector('.dshcb-section .dshcb-tab-panel'); if (panel === null || panel.firstElementChild === null) return false; const titles = [...panel.querySelectorAll('.dshcb-row .dshcb-title')].map((el) => el.innerText.trim()); return panel.firstElementChild.classList.contains('dshcb-background-block') && JSON.stringify(titles) === JSON.stringify(['背景显示方式', '轮换设置', '轮换分组', '左侧栏遮罩层', '主窗口遮罩层', '文字框遮罩层', '右侧栏遮罩层', '遮罩层设置跟随深浅色']); })()"
     },
     {
       "check": "background preview shows the selected image",
@@ -160,19 +160,19 @@
     },
     {
       "check": "scrim rows carry no description text",
-      "expr": "(() => { const rows = [...document.querySelectorAll('.dshcb-section .dshcb-tab-panel .dshcb-row')]; const scrim = rows.filter((row) => ['左侧栏遮罩层', '主窗口遮罩层', '右侧栏遮罩层'].includes(row.querySelector('.dshcb-title')?.innerText.trim())); return rows.length === 6 && scrim.length === 3 && scrim.every((row) => row.querySelector('.dshcb-desc') === null); })()"
+      "expr": "(() => { const rows = [...document.querySelectorAll('.dshcb-section .dshcb-tab-panel .dshcb-row')]; const scrim = rows.filter((row) => ['左侧栏遮罩层', '主窗口遮罩层', '文字框遮罩层', '右侧栏遮罩层'].includes(row.querySelector('.dshcb-title')?.innerText.trim())); return rows.length === 8 && scrim.length === 4 && scrim.every((row) => row.querySelector('.dshcb-desc') === null); })()"
     },
     {
       "check": "Background rows are separated by the default divider line",
-      "expr": "(() => { const rows = [...document.querySelectorAll('.dshcb-section .dshcb-tab-panel .dshcb-row')]; return rows.length === 6 && rows.slice(0, -1).every((row) => Number.parseFloat(getComputedStyle(row).borderBottomWidth) > 0); })()"
+      "expr": "(() => { const rows = [...document.querySelectorAll('.dshcb-section .dshcb-tab-panel .dshcb-row')]; return rows.length === 8 && rows.slice(0, -1).every((row) => Number.parseFloat(getComputedStyle(row).borderBottomWidth) > 0); })()"
     },
     {
       "check": "every row is a two-column module: the control block stays right-aligned and never overlaps the copy",
-      "expr": "(() => { const rows = [...document.querySelectorAll('.dshcb-section .dshcb-tab-panel .dshcb-row')]; if (rows.length !== 6) return false; return rows.every((row) => { const text = row.querySelector('.dshcb-text'); const control = row.querySelector('.dshcb-control'); if (text === null || control === null) return false; const rowRect = row.getBoundingClientRect(); const textRect = text.getBoundingClientRect(); const controlRect = control.getBoundingClientRect(); return controlRect.left >= textRect.right - 1 && Math.abs(controlRect.right - rowRect.right) <= 1 && controlRect.width > 0; }); })()"
+      "expr": "(() => { const rows = [...document.querySelectorAll('.dshcb-section .dshcb-tab-panel .dshcb-row')]; if (rows.length !== 8) return false; return rows.every((row) => { const text = row.querySelector('.dshcb-text'); const control = row.querySelector('.dshcb-control'); if (text === null || control === null) return false; const rowRect = row.getBoundingClientRect(); const textRect = text.getBoundingClientRect(); const controlRect = control.getBoundingClientRect(); return controlRect.left >= textRect.right - 1 && Math.abs(controlRect.right - rowRect.right) <= 1 && controlRect.width > 0; }); })()"
     },
     {
       "check": "the three scrim sliders share one control module width",
-      "expr": "(() => { const rows = [...document.querySelectorAll('.dshcb-section .dshcb-tab-panel .dshcb-row')].filter((row) => ['左侧栏遮罩层', '主窗口遮罩层', '右侧栏遮罩层'].includes(row.querySelector('.dshcb-title')?.innerText.trim())); if (rows.length !== 3) return false; const widths = rows.map((row) => Math.round(row.querySelector('.dshcb-control').getBoundingClientRect().width)); const ranges = rows.map((row) => Math.round(row.querySelector('.dshcb-range').getBoundingClientRect().width)); return new Set(widths).size === 1 && new Set(ranges).size === 1 && widths[0] > 0; })()"
+      "expr": "(() => { const rows = [...document.querySelectorAll('.dshcb-section .dshcb-tab-panel .dshcb-row')].filter((row) => ['左侧栏遮罩层', '主窗口遮罩层', '文字框遮罩层', '右侧栏遮罩层'].includes(row.querySelector('.dshcb-title')?.innerText.trim())); if (rows.length !== 4) return false; const widths = rows.map((row) => Math.round(row.querySelector('.dshcb-control').getBoundingClientRect().width)); const ranges = rows.map((row) => Math.round(row.querySelector('.dshcb-range').getBoundingClientRect().width)); return new Set(widths).size === 1 && new Set(ranges).size === 1 && widths[0] > 0; })()"
     },
     {
       "shot": "01-smoke-settings-background"

@@ -32,7 +32,7 @@ npm pack --dry-run    # 确认 tarball 内容
 1. 在 GitHub 新建公开仓库 `dsh-chat-background`（默认分支 `main`）；
 2. 推送代码与 `v1.1.0` 标签；
 3. 仓库 **About** 填写简介：
-   - 描述：`给 DeepSeek Harness 桌面端换背景：背景图/轮换分组/三栏遮罩/输入栏背景条/任务进度条/Token 用量`；
+   - 描述：`给 DeepSeek Harness 桌面端换背景：背景图/轮换分组/四层遮罩/输入栏背景条/任务进度条/Token 用量`；
    - 网站：留空或填仓库地址；
    - Topics：`dsh-plugin`、`deepseek-harness`、`dsh`、`background`、`wallpaper`、`theme`、`cordis`；
 4. README 必须包含可复制的安装命令：

@@ -4,7 +4,7 @@
   "description": "Chat background image, sidebar veil, composer strip, task progress bar and all-session token total for the DeepSeek Harness (DSH) Web GUI.",
   "meta": {
     "title": "聊天背景",
-    "description": "背景图、侧栏柔化、输入栏下方背景条、任务进度条与全会话 token 总用量"
+    "description": "背景图、四层遮罩（可让浅色/深色主题分别保存）、输入栏下方背景条、任务进度条与全会话 token 总用量"
   },
   "icon": "./icon.svg",
   "author": "LittleLemonJam",

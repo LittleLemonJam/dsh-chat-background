@@ -29,6 +29,7 @@ import {
   SCRIM_MAX,
   SCRIM_MIN,
   SCRIM_RIGHT_KEY,
+  SCRIM_WINDOW_KEY,
   SELECTION_KEY,
   TOKEN_SIZE_DEFAULT,
   TOKEN_SIZE_KEY,
@@ -39,7 +40,7 @@ import {
   VEIL_MAX,
   VEIL_MIN
 } from './constants.js'
-import { applyBackground } from './background.js'
+import { applyBackground, isDark, readScrimSlider, writeScrimSlider } from './background.js'
 import { recordDiagnostics } from './diagnostics.js'
 import { useCopy } from './i18n.js'
 import { clampToRange } from './lib/clamp.js'
@@ -614,21 +615,70 @@ export function ColorRow({ setting, title, description }) {
 }
 
 /**
+ * Theme/follow state a scrim slider has to re-read when it changes. The
+ * follow-theme switch re-renders through its own hook; the body theme marker
+ * observer covers the app switching light/dark while the page stays mounted.
+ */
+function useScrimTheme() {
+  const follow = settings().switches.scrimTheme.useEnabled()
+  const [dark, setDark] = useState(() => isDark())
+  useEffect(() => {
+    const update = () => setDark(isDark())
+    const observer = new MutationObserver(update)
+    if (document.body !== null) {
+      observer.observe(document.body, { attributes: true, attributeFilter: ['data-ds-dark-theme'] })
+    }
+    const media = window.matchMedia?.('(prefers-color-scheme: dark)')
+    media?.addEventListener?.('change', update)
+    return () => {
+      observer.disconnect()
+      media?.removeEventListener?.('change', update)
+    }
+  }, [])
+  return { follow, dark }
+}
+
+/**
  * One slider row: a range input, its live value, and one side effect. Most
  * sliders repaint the background; the token-size row repaints its own line
- * instead, which is what `after` is for.
+ * instead, which is what `after` is for. `scrim` makes the row read and write
+ * the theme-scoped scrim value.
  * @param props - storage key and bounds, copy, optional disabled state, unit
- *   suffix and the side effect to run after the value changed.
+ *   suffix, the side effect to run after the value changed, and whether the
+ *   value belongs to the scrim group.
  */
-export function ActiveSliderRow({ storageKey, minimum, maximum, fallback, title, description, disabled, unit, after }) {
+export function ActiveSliderRow({
+  storageKey,
+  minimum,
+  maximum,
+  fallback,
+  title,
+  description,
+  disabled,
+  unit,
+  after,
+  scrim = false
+}) {
   const copy = useCopy()
-  const [value, setValue] = useState(() => readPercent(storageKey, fallback, minimum, maximum))
+  const scrimTheme = useScrimTheme()
+  const readValue = () =>
+    scrim
+      ? readScrimSlider(storageKey, fallback, minimum, maximum)
+      : readPercent(storageKey, fallback, minimum, maximum)
+  const [value, setValue] = useState(readValue)
+
+  /* The stored value depends on the theme only while the follow-theme switch
+   * is on; re-read after either changes. */
+  useEffect(() => {
+    setValue(readValue())
+  }, [scrimTheme.follow, scrimTheme.dark])
 
   const change = (next) => {
     const parsed = Number(next)
     const clamped = Number.isFinite(parsed) ? clampToRange(parsed, minimum, maximum) : value
     setValue(clamped)
-    writeString(storageKey, String(clamped))
+    if (scrim) writeScrimSlider(storageKey, clamped)
+    else writeString(storageKey, String(clamped))
     /* Callers that drive something other than the background repaint it here. */
     if (typeof after === 'function') after(clamped)
     else applyBackground(readSelection())
@@ -662,19 +712,34 @@ export function ScrimLeftRow() {
     minimum: SCRIM_MIN,
     maximum: SCRIM_MAX,
     fallback: readPercent(VEIL_KEY, VEIL_DEFAULT, VEIL_MIN, VEIL_MAX),
-    title: copy.scrimLeftTitle
+    title: copy.scrimLeftTitle,
+    scrim: true
   })
 }
 
-/** Main window scrim layer. */
-export function ScrimMainRow() {
+/** Whole main-window scrim layer. */
+export function ScrimWindowRow() {
+  const copy = useCopy()
+  return h(ActiveSliderRow, {
+    storageKey: SCRIM_WINDOW_KEY,
+    minimum: SCRIM_MIN,
+    maximum: SCRIM_MAX,
+    fallback: 0,
+    title: copy.scrimWindowTitle,
+    scrim: true
+  })
+}
+
+/** Text-card scrim layer (one card per conversation turn). */
+export function ScrimTextRow() {
   const copy = useCopy()
   return h(ActiveSliderRow, {
     storageKey: SCRIM_MAIN_KEY,
     minimum: SCRIM_MIN,
     maximum: SCRIM_MAX,
     fallback: readPercent(SCRIM_KEY, SCRIM_DEFAULT, SCRIM_MIN, SCRIM_MAX),
-    title: copy.scrimMainTitle
+    title: copy.scrimTextTitle,
+    scrim: true
   })
 }
 
@@ -686,7 +751,18 @@ export function ScrimRightRow() {
     minimum: SCRIM_MIN,
     maximum: SCRIM_MAX,
     fallback: readPercent(VEIL_KEY, VEIL_DEFAULT, VEIL_MIN, VEIL_MAX),
-    title: copy.scrimRightTitle
+    title: copy.scrimRightTitle,
+    scrim: true
+  })
+}
+
+/** Whether the four scrim sliders keep separate light/dark values. */
+export function ScrimFollowRow() {
+  const copy = useCopy()
+  return h(SwitchRow, {
+    setting: settings().switches.scrimTheme,
+    title: copy.scrimFollowTitle,
+    description: copy.scrimFollowDescription
   })
 }
 
@@ -771,8 +847,10 @@ const BACKGROUND_ROWS = [
   RotationEffectRow,
   RotationGroupRow,
   ScrimLeftRow,
-  ScrimMainRow,
-  ScrimRightRow
+  ScrimWindowRow,
+  ScrimTextRow,
+  ScrimRightRow,
+  ScrimFollowRow
 ]
 
 /**

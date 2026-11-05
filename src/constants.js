@@ -57,6 +57,10 @@ export const VEIL_KEY = 'dsh-chat-background:veil'
 export const SCRIM_LEFT_KEY = 'dsh-chat-background:scrim-left'
 export const SCRIM_MAIN_KEY = 'dsh-chat-background:scrim-main'
 export const SCRIM_RIGHT_KEY = 'dsh-chat-background:scrim-right'
+/** Whole main-window veil; the text-card veil keeps SCRIM_MAIN_KEY. */
+export const SCRIM_WINDOW_KEY = 'dsh-chat-background:scrim-window'
+/** Opt-in switch: store scrim values separately for the light and dark themes. */
+export const SCRIM_FOLLOW_THEME_KEY = 'dsh-chat-background:scrim-follow-theme'
 export const STRIP_KEY = 'dsh-chat-background:strip'
 export const STRIP_COLOR_KEY = 'dsh-chat-background:strip-color'
 export const PROGRESS_KEY = 'dsh-chat-background:progress'
@@ -126,6 +130,7 @@ export const INLINE_PROPERTIES = [
   '--dsh-chat-background-image',
   '--dsh-chat-background-scrim-left',
   '--dsh-chat-background-scrim-main',
+  '--dsh-chat-background-scrim-window',
   '--dsh-chat-background-scrim-right',
   '--dsh-chat-strip-bg',
   '--dsh-progress-color',
@@ -137,6 +142,9 @@ export const INLINE_PROPERTIES = [
 /** Per-region scrim opacity, in percent; 0 means no darkening. */
 export const SCRIM_MIN = 0
 export const SCRIM_MAX = 100
+/** The whole main-window veil starts transparent; the text-card veil keeps its
+ * legacy default. */
+export const SCRIM_WINDOW_DEFAULT = 0
 /** Legacy 1.4.x sidebar veil bounds/default, kept as migration fallbacks. */
 export const SCRIM_DEFAULT = 58
 export const VEIL_MIN = 0
