@@ -616,7 +616,7 @@ function nudgeNativeTitlebar(active) {
  * @param elements - currently measured opaque containers.
  */
 export function syncDynamicRules(elements) {
-  if (typeof document === 'undefined') return
+  if (typeof document === 'undefined') return false
   let tag = document.querySelector(`style[data-plugin-css=${cssString(DYNAMIC_TAG_ID)}]`)
   if (tag === null) {
     tag = document.createElement('style')
@@ -634,33 +634,38 @@ export function syncDynamicRules(elements) {
     for (const token of tokens) selectors.push(`html[data-dsh-chat-background] [class~=${cssString(token)}]`)
   }
   const next = selectors.length === 0 ? '' : `${selectors.join(',\n')} { background-color: transparent !important; }`
-  if (tag.textContent !== next) tag.textContent = next
+  if (tag.textContent === next) return false
+  tag.textContent = next
+  return true
 }
 
 /**
  * Measure which containers paint the conversation area's base surface and mark
  * them so the stylesheet can clear them. Discovery is by measurement, so it
  * survives a rebuild that renames the hashed classes.
- * @returns the opaque containers, from the conversation element upwards.
+ * @returns the opaque containers, from the conversation element upwards, and
+ *   whether this pass marked a new one or changed the measured rule.
  */
 function markPainters() {
   const anchor = conversationAnchor()
-  if (anchor === null) return []
+  if (anchor === null) return { elements: [], changed: false }
   const start = anchor.firstElementChild ?? anchor
   const candidates = []
   for (let element = start; element !== null && element !== document.documentElement; element = element.parentElement) {
     if (isOpaque(window.getComputedStyle(element).backgroundColor)) candidates.push(element)
   }
+  let changed = false
   for (const element of candidates) {
     if (painterMarks.has(element)) continue
     painterMarks.add(element)
     element.setAttribute(LIFT_ATTRIBUTE, '')
+    changed = true
   }
   /* Only the lowest opaque container gets the static rule: it is the column
    * that gets rebuilt on a session switch, and everything above it may also
    * contain the sidebar column. */
-  if (candidates.length > 0) syncDynamicRules([candidates[0]])
-  return candidates
+  if (candidates.length > 0 && syncDynamicRules([candidates[0]])) changed = true
+  return { elements: candidates, changed }
 }
 
 /* ---- application --------------------------------------------------------- */
@@ -703,8 +708,6 @@ export function applyBackground(selection) {
   const scrimRight = readRightScrim()
   const signature = document.querySelectorAll('[data-slot]').length
   const container = conversationContainer()
-  const painters = markedPainters()
-  const needsPaint = signature !== markSignature || container !== markContainer || painters.length === 0
   const sameVars =
     applied.selection === next &&
     applied.dark === dark &&
@@ -738,13 +741,18 @@ export function applyBackground(selection) {
    * rebuilds. The helper only writes when a marker is missing. */
   markRegionColumns()
   ensureBackgroundLayer(next)
+  /* Re-measure on every apply rather than only when the slot count or the
+   * painted container changes: 0.2.2 rebuilds the conversation surface when a
+   * full page (the plugin manager, for example) is closed again, and the new
+   * element may carry a class the previous measured rule does not know. The
+   * walk is a handful of ancestors and this pass is rAF-throttled. */
+  const painted = markPainters()
+  const needsPaint =
+    signature !== markSignature || container !== markContainer || painted.elements.length === 0 || painted.changed
   if (sameVars && !needsPaint) return
-  /* Measure before writing: the writes below invalidate style, and reading
-   * computed backgrounds afterwards would force a style recalculation (`BG-09`). */
   if (needsPaint) {
     markSignature = signature
     markContainer = container
-    markPainters()
   }
   recordDiagnostics({
     background: {

@@ -34,7 +34,7 @@ the input, a task progress bar and a total token usage line.
 
 ## Install
 
-Requirement: DSH desktop **≥ 0.2.1-rc.3**. Node ≥ 22.19 is only needed to build and test from source.
+Requirement: DSH desktop **≥ 0.2.2-rc.1**. Node ≥ 22.19 is only needed to build and test from source.
 
 ### From GitHub (recommended)
 
@@ -51,7 +51,7 @@ Check **Plugins → Installed** to confirm `dsh-chat-background` is enabled.
 dsh plugin --profile desktop add dsh-chat-background
 ```
 
-The npm package tracks the GitHub release (currently `1.1.0`); either channel works.
+The npm package tracks the GitHub release (currently `1.1.1`); either channel works.
 
 ### Manual install
 
@@ -90,8 +90,8 @@ creates it automatically. Drop images in, then press **Rescan** under **Settings
 
 | Item             | Value                                |
 | ---------------- | ------------------------------------ |
-| Verified DSH     | `0.2.1-rc.3` (Electron 44 / Node 24) |
-| DSH requirement  | `>=0.2.1-rc.3`                       |
+| Verified DSH     | `0.2.2-rc.1` (Electron 44 / Node 24) |
+| DSH requirement  | `>=0.2.2-rc.1`                       |
 | Node requirement | `^22.19.0 \|\| >=24.0.0`             |
 | Platforms        | Windows / macOS / Linux desktop      |
 

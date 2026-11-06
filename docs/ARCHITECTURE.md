@@ -73,8 +73,9 @@ composer 包装层 ResizeObserver（纯样式尺寸） ──┘        ├─ a
                                                         └─ renderTokenTotal()
 ```
 
-`applyBackground` 在稳态下很便宜：只有「`[data-slot]` 数量」或「会话容器身份」变化时才重新测量不透明容器；
-稳态下不写任何属性（状态快照一致时直接返回）。
+`applyBackground` 在稳态下很便宜：每次 flush 都沿会话锚点向上走几个祖先重新测量不透明容器（0.2.2 会在离开全页面后重建会话根，
+只按「`[data-slot]` 数量」或「会话容器身份」判断会漏掉新容器），但只有测量结果变化或状态快照不一致时才写属性；
+`rAF` 合并让这次测量最多每帧一次。
 
 ## 4. 宿主半契约
 
@@ -193,13 +194,15 @@ DSH 升级可能改变 DOM，插件的脆弱点与处理方式如下：
 | 侧栏/会话容器的 CSS 模块名后缀（`sidebarCol`、`fade`、`composerSeat` 等）                                              | `src/styles.js`                                         | 侧栏透明、渐隐或底部白边异常 | 重新核对类名后缀              |
 | 全屏右栏遮罩的层叠假设                                                                                                 | `src/styles.js`（panel 的 `z-index` 与 offset 变量）    | 遮罩盖住或漏盖 UI            | 检查 panel 层叠上下文         |
 
-- **不硬编码会话根的哈希类名**：不透明容器由 `markPainters()` 逐层测量后打标，会话切换时自动重新测量；
-  哈希变化不会留下死规则。
+- **不硬编码会话根的哈希类名**：不透明容器由 `markPainters()` 逐层测量后打标，每次 flush 都重新测量；
+  0.2.2 离开插件页等全页面后会重建会话根，新容器会在下一次测量中重新加入透明规则，哈希变化不会留下死规则。
+- **全页面页头**：0.2.2 的插件页/插件市场等全页面用 `[class*=pageBar][data-natural]::before` 给滚动页头铺主题底色；
+  背景图启用时该伪元素恢复透明，交给壁纸和「主窗口遮罩层」。
 - **平台表面**：Windows 标题栏 `html[data-windows-titlebar] [class*=frame]::before`、macOS 侧栏
   `background-image` 渐变、`forced-colors` / `prefers-reduced-transparency` 分别有专门规则（`src/styles.js`）。
 - **可观测性**：宿主 `/health` 与浏览器 `window.__dshcb.diagnostics()` 报告版本、限制、栅栏与各锚点选择结果；
   功能静默降级时可据此定位（`src/diagnostics.js`）。
-- **兼容声明**只有 `engines.dsh`（`>=0.2.1-rc.3`）；在未声明兼容的新版本上验证通过后，再扩大范围。
+- **兼容声明**只有 `engines.dsh`（`>=0.2.2-rc.1`）；在未声明兼容的新版本上验证通过后，再扩大范围。
 
 ## 9. 扩展指南
 

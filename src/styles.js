@@ -233,6 +233,15 @@ ${active} [${MAIN_COLUMN_ATTRIBUTE}]::after {
   background: var(--dsh-chat-background-scrim-window);
 }
 
+/* 0.2.2 full pages (the plugin manager, the plugin market, ...) paint a sticky
+ * page header through a data-natural pseudo element with the opaque theme base;
+ * it showed as a solid white/black bar across the top of the page. Hand that
+ * surface back to the image; the window veil above still darkens it when the
+ * user raises 主窗口遮罩层. */
+${active} [class*="pageBar"][data-natural]::before {
+  background: transparent !important;
+}
+
 /* The reading-area veil is painted per conversation turn by the turn-mask
  * layer (src/turn-masks.js), not as one rectangle over the whole centre
  * column: the wallpaper stays visible between two turns while every turn —

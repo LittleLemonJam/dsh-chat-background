@@ -6,7 +6,7 @@
 
 ```bash
 npm run verify        # 格式 + 构建一致性 + 静态检查 + 单元测试
-npm run test:e2e      # 11 个端到端套件（需要本机 DSH）
+npm run test:e2e      # 12 个端到端套件（需要本机 DSH）
 npm pack --dry-run    # 确认 tarball 内容
 ```
 
@@ -25,7 +25,7 @@ npm pack --dry-run    # 确认 tarball 内容
 - 删除旧 tag（如 `git tag -d v1.2.0`），只保留要发布的版本；
 - 复查 `git log --oneline` 与 `git ls-files`，确认没有个人文件后再推送。
 
-当前仓库已按此方式重建为单提交的 1.0.0 起点，当前发布版本 1.1.0。
+当前仓库已按此方式重建为单提交的 1.0.0 起点，当前发布版本 1.1.1。
 
 ### 2.2 首次创建仓库
 
@@ -55,7 +55,7 @@ git push origin main --tags
 
 ## 3. npm 发布
 
-`1.1.0` 已发布到 npm，`dsh plugin --profile desktop add dsh-chat-background` 可直接安装。
+`1.1.1` 已发布到 npm，`dsh plugin --profile desktop add dsh-chat-background` 可直接安装。
 发新版本时：
 
 ```bash
@@ -67,7 +67,7 @@ npm publish --access public     # 需要带 bypass 2FA 的 granular token
 
 ```bash
 npm view dsh-chat-background version   # 应等于当前版本号
-dsh plugin --profile desktop add dsh-chat-background@1.1.0
+dsh plugin --profile desktop add dsh-chat-background@1.1.1
 ```
 
 > npm 页面上的 README 是发布时 tarball 的快照，发布后再改 README 不会回写 npm 页面，
@@ -81,10 +81,10 @@ DSH 插件页的安装走 profile 里的 pnpm；pnpm 11 默认 `minimumReleaseAg
 `dsh-chat-background` 装到的是 1.0.0。
 
 - 观察期从 npm registry 的发布时间算（`npm view dsh-chat-background time --json`）；
-- 精确版本 `dsh plugin add dsh-chat-background@1.1.0` **不受**该限制，可以立即安装
+- 精确版本 `dsh plugin add dsh-chat-background@1.1.1` **不受**该限制，可以立即安装
   （DSH 安装界面也会提示“卸载后安装精确版本”）；
 - 本机也可以在 profile 的 `pnpm-workspace.yaml` 里用
-  `minimumReleaseAgeExclude: ["dsh-chat-background@1.1.0"]` 放行单个版本，或改
+  `minimumReleaseAgeExclude: ["dsh-chat-background@1.1.1"]` 放行单个版本，或改
   `minimumReleaseAge`（不推荐）；
 - 插件市场的一键安装是不带版本的，因此发布后 24 小时内用户一键安装拿到的仍是旧版，
   这是 pnpm 供应链安全策略的预期行为，不是发布失败。

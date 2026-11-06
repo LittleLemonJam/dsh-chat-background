@@ -32,7 +32,7 @@
 
 ## 安装
 
-前置：DSH 桌面端 **≥ 0.2.1-rc.3**。Node ≥ 22.19 只用于从源码构建和测试，普通安装不需要。
+前置：DSH 桌面端 **≥ 0.2.2-rc.1**。Node ≥ 22.19 只用于从源码构建和测试，普通安装不需要。
 
 ### 从 GitHub 安装（推荐）
 
@@ -49,7 +49,7 @@ dsh plugin --profile desktop add github:LittleLemonJam/dsh-chat-background
 dsh plugin --profile desktop add dsh-chat-background
 ```
 
-npm 包与 GitHub 发布同步（当前 `1.1.0`），两条安装方式任选其一即可。
+npm 包与 GitHub 发布同步（当前 `1.1.1`），两条安装方式任选其一即可。
 
 ### 手动安装
 
@@ -86,8 +86,8 @@ npm 包与 GitHub 发布同步（当前 `1.1.0`），两条安装方式任选其
 
 | 项            | 值                                    |
 | ------------- | ------------------------------------- |
-| 已验证 DSH    | `0.2.1-rc.3`（Electron 44 / Node 24） |
-| DSH 版本要求  | `>=0.2.1-rc.3`                        |
+| 已验证 DSH    | `0.2.2-rc.1`（Electron 44 / Node 24） |
+| DSH 版本要求  | `>=0.2.2-rc.1`                        |
 | Node 版本要求 | `^22.19.0 \|\| >=24.0.0`              |
 | 支持平台      | Windows / macOS / Linux 桌面端        |
 

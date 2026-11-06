@@ -1,5 +1,5 @@
 /**
- * dsh-chat-background v1.1.0
+ * dsh-chat-background v1.1.1
  * Chat background image, sidebar veil, composer strip, task progress bar and all-session token total for the DeepSeek Harness (DSH) Web GUI.
  * @author LittleLemonJam
  * @license MIT
@@ -99,7 +99,7 @@
   }
   function diagnosticsSnapshot() {
     return {
-      version: true ? "1.1.0" : "unknown",
+      version: true ? "1.1.1" : "unknown",
       updatedAt: Date.now(),
       ...state
     };
@@ -1377,7 +1377,7 @@
     document.body.style.setProperty("--dsh-chat-background-native", active2 ? "1" : "0");
   }
   function syncDynamicRules(elements) {
-    if (typeof document === "undefined") return;
+    if (typeof document === "undefined") return false;
     let tag = document.querySelector(`style[data-plugin-css=${cssString(DYNAMIC_TAG_ID)}]`);
     if (tag === null) {
       tag = document.createElement("style");
@@ -1395,23 +1395,27 @@
       for (const token of tokens) selectors.push(`html[data-dsh-chat-background] [class~=${cssString(token)}]`);
     }
     const next = selectors.length === 0 ? "" : `${selectors.join(",\n")} { background-color: transparent !important; }`;
-    if (tag.textContent !== next) tag.textContent = next;
+    if (tag.textContent === next) return false;
+    tag.textContent = next;
+    return true;
   }
   function markPainters() {
     const anchor = conversationAnchor();
-    if (anchor === null) return [];
+    if (anchor === null) return { elements: [], changed: false };
     const start = anchor.firstElementChild ?? anchor;
     const candidates = [];
     for (let element = start; element !== null && element !== document.documentElement; element = element.parentElement) {
       if (isOpaque(window.getComputedStyle(element).backgroundColor)) candidates.push(element);
     }
+    let changed = false;
     for (const element of candidates) {
       if (painterMarks.has(element)) continue;
       painterMarks.add(element);
       element.setAttribute(LIFT_ATTRIBUTE, "");
+      changed = true;
     }
-    if (candidates.length > 0) syncDynamicRules([candidates[0]]);
-    return candidates;
+    if (candidates.length > 0 && syncDynamicRules([candidates[0]])) changed = true;
+    return { elements: candidates, changed };
   }
   var applied2 = {
     selection: void 0,
@@ -1435,8 +1439,6 @@
     const scrimRight = readRightScrim();
     const signature = document.querySelectorAll("[data-slot]").length;
     const container = conversationContainer();
-    const painters = markedPainters();
-    const needsPaint = signature !== markSignature || container !== markContainer || painters.length === 0;
     const sameVars = applied2.selection === next && applied2.dark === dark && applied2.scrimLeft === scrimLeft && applied2.scrimMain === scrimMain && applied2.scrimWindow === scrimWindow && applied2.scrimRight === scrimRight;
     if (next === null) {
       if (sameVars && !root.hasAttribute(ACTIVE_ATTRIBUTE)) return;
@@ -1459,11 +1461,12 @@
     }
     markRegionColumns();
     ensureBackgroundLayer(next);
+    const painted = markPainters();
+    const needsPaint = signature !== markSignature || container !== markContainer || painted.elements.length === 0 || painted.changed;
     if (sameVars && !needsPaint) return;
     if (needsPaint) {
       markSignature = signature;
       markContainer = container;
-      markPainters();
     }
     recordDiagnostics({
       background: {
@@ -2898,6 +2901,15 @@ ${active} [${MAIN_COLUMN_ATTRIBUTE}]::after {
   z-index: -1;
   pointer-events: none;
   background: var(--dsh-chat-background-scrim-window);
+}
+
+/* 0.2.2 full pages (the plugin manager, the plugin market, ...) paint a sticky
+ * page header through a data-natural pseudo element with the opaque theme base;
+ * it showed as a solid white/black bar across the top of the page. Hand that
+ * surface back to the image; the window veil above still darkens it when the
+ * user raises 主窗口遮罩层. */
+${active} [class*="pageBar"][data-natural]::before {
+  background: transparent !important;
 }
 
 /* The reading-area veil is painted per conversation turn by the turn-mask
