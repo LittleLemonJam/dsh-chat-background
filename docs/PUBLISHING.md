@@ -46,21 +46,46 @@ npm pack --dry-run    # 确认 tarball 内容
 ### 2.3 Release
 
 推送 `v*` 标签会触发 `.github/workflows/release.yml`：校验标签与 `package.json` 版本、跑 `npm run verify`、
-生成 npm tarball 并创建 GitHub Release。发布后在 Release 中附上主要更新内容即可。
+生成 npm tarball、创建 GitHub Release，并通过 **npm Trusted Publishing** 自动发布到 npm——不需要 `NPM_TOKEN`，
+也不会再遇到 granular token 过期的问题。
 
 ```bash
-git tag v1.1.0
+git tag vX.Y.Z
 git push origin main --tags
 ```
+
+首次使用前需要维护者在 npm 网页完成一次性授权（见 [3.0](#30-一次性配置trusted-publishing)）。
 
 ## 3. npm 发布
 
 `1.1.1` 已发布到 npm，`dsh plugin --profile desktop add dsh-chat-background` 可直接安装。
-发新版本时：
+现在 npm 发布由 tag push 触发的 Release 工作流通过
+[Trusted Publishing](https://docs.npmjs.com/trusted-publishers) 完成，不再依赖长期 npm token。
+
+### 3.0 一次性配置（Trusted Publishing）
+
+维护者登录 npm 后，在包设置里完成一次授权即可：
+
+1. 打开 `https://www.npmjs.com/package/dsh-chat-background/settings`（或 npm 包页面 → **Settings**）；
+2. 找到 **Trusted Publisher** / **Trusted Publishing**，选择 **GitHub Actions**；
+3. 填写：
+   - **Organization or user**：`LittleLemonJam`
+   - **Repository**：`dsh-chat-background`
+   - **Workflow filename**：`release.yml`
+   - **Environment**：留空
+4. 保存。之后推送 `v*` 标签时，GitHub Actions 会用 OIDC 换取 npm 短期发布凭证，
+   自动执行 `npm publish --provenance`，仓库里不需要保存 `NPM_TOKEN`。
+
+> 维护者账号的 granular token 到期后只能在 npm 网页上手动重建，工具无法自动续期；
+> Trusted Publishing 正是为了避免这种周期性维护。
+
+### 3.1 本地手动发布（一般不需要）
+
+仅在 Trusted Publishing 不可用时作为兜底：
 
 ```bash
 npm whoami                      # 确认是维护者账号 lemonjam
-npm publish --access public     # 需要带 bypass 2FA 的 granular token
+npm publish --access public     # 需要有效的 granular token
 ```
 
 验证：
@@ -73,7 +98,7 @@ dsh plugin --profile desktop add dsh-chat-background@1.1.1
 > npm 页面上的 README 是发布时 tarball 的快照，发布后再改 README 不会回写 npm 页面，
 > 下次发版时才会同步；以 GitHub 仓库的 README 为准。
 
-### 3.1 pnpm 观察期（minimumReleaseAge）
+### 3.2 pnpm 观察期（minimumReleaseAge）
 
 DSH 插件页的安装走 profile 里的 pnpm；pnpm 11 默认 `minimumReleaseAge = 1440` 分钟，即
 **npm 发布后 24 小时**内，`dsh plugin add dsh-chat-background`（不带版本）不会解析到最新版，
@@ -89,7 +114,7 @@ DSH 插件页的安装走 profile 里的 pnpm；pnpm 11 默认 `minimumReleaseAg
 - 插件市场的一键安装是不带版本的，因此发布后 24 小时内用户一键安装拿到的仍是旧版，
   这是 pnpm 供应链安全策略的预期行为，不是发布失败。
 
-### 3.2 发布后验证（每次发版必做）
+### 3.3 发布后验证（每次发版必做）
 
 1. 记录发布时间并确认观察期：
    ```bash
