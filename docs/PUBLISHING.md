@@ -66,18 +66,32 @@ git push origin main --tags
 
 维护者登录 npm 后，在包设置里完成一次授权即可：
 
-1. 打开 `https://www.npmjs.com/package/dsh-chat-background/settings`（或 npm 包页面 → **Settings**）；
-2. 找到 **Trusted Publisher** / **Trusted Publishing**，选择 **GitHub Actions**；
+1. 打开包页面 <https://www.npmjs.com/package/dsh-chat-background>，进入 **Settings**（包设置/访问设置页，地址通常是
+   `/package/dsh-chat-background/access`；直接访问 `/settings` 会 404）；
+2. 找到 **Trusted publishing** / **Trusted Publisher**，选择 **GitHub Actions**；
 3. 填写：
    - **Organization or user**：`LittleLemonJam`
    - **Repository**：`dsh-chat-background`
    - **Workflow filename**：`release.yml`
    - **Environment**：留空
-4. 保存。之后推送 `v*` 标签时，GitHub Actions 会用 OIDC 换取 npm 短期发布凭证，
-   自动执行 `npm publish --provenance`，仓库里不需要保存 `NPM_TOKEN`。
+   - **Allowed actions**：勾选 **npm publish**（不是只允许 stage publish）
+4. 保存。
 
-> 维护者账号的 granular token 到期后只能在 npm 网页上手动重建，工具无法自动续期；
-> Trusted Publishing 正是为了避免这种周期性维护。
+如果 npm 网页的入口打不开或报 404，可以用 npm 11.15+ 的命令行完成同样的配置（需要账号已开启 2FA）：
+
+```bash
+npm install -g npm@^11.15.0
+npm login --auth-type=web
+npm trust github dsh-chat-background \
+  --repo LittleLemonJam/dsh-chat-background \
+  --file release.yml \
+  --allow-publish \
+  --yes
+npm trust list dsh-chat-background
+```
+
+> **注意**：Trusted Publishing 的 GitHub Actions 配置要求 workflow 文件名精确匹配（`release.yml`，大小写敏感）。
+> 配置后首次发布需要在 2 天内成功，否则配置会过期。
 
 ### 3.1 本地手动发布（一般不需要）
 
