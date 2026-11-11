@@ -2,11 +2,15 @@
 
 本项目遵循 [SemVer](https://semver.org/lang/zh-CN/)；版本号与 `package.json`、`client.js` banner 保持一致。
 
-## [Unreleased]
+## [1.1.2] - 2026-11-12
+
+文档与发布流程版本，插件运行时无行为变化。
 
 ### 变更
 
 - npm 发布改由 tag push 的 Release 工作流通过 **Trusted Publishing** 完成，不再依赖会过期的长期 npm token。
+- 修正 Trusted Publisher 的配置入口说明：`/package/<pkg>/settings` 会 404，改为包设置/access 页或 `npm trust` CLI。
+- Release 工作流增加 `registry-url`、npm 发布与 GitHub Release 的幂等保护。
 
 ## [1.1.1] - 2026-11-06
 

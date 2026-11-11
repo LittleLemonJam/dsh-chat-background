@@ -14,7 +14,7 @@ body:
     attributes:
       label: 插件版本 / Plugin version
       description: 见设置 → 插件列表，或 package.json
-      placeholder: '1.1.1'
+      placeholder: '1.1.2'
     validations:
       required: true
 

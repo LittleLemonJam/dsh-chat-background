@@ -49,7 +49,7 @@ dsh plugin --profile desktop add github:LittleLemonJam/dsh-chat-background
 dsh plugin --profile desktop add dsh-chat-background
 ```
 
-npm 包与 GitHub 发布同步（当前 `1.1.1`），两条安装方式任选其一即可。
+npm 包与 GitHub 发布同步（当前 `1.1.2`），两条安装方式任选其一即可。
 
 ### 手动安装
 

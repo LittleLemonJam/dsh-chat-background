@@ -1,5 +1,5 @@
 /**
- * dsh-chat-background v1.1.1
+ * dsh-chat-background v1.1.2
  * Chat background image, sidebar veil, composer strip, task progress bar and all-session token total for the DeepSeek Harness (DSH) Web GUI.
  * @author LittleLemonJam
  * @license MIT
@@ -99,7 +99,7 @@
   }
   function diagnosticsSnapshot() {
     return {
-      version: true ? "1.1.1" : "unknown",
+      version: true ? "1.1.2" : "unknown",
       updatedAt: Date.now(),
       ...state
     };
