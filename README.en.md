@@ -27,7 +27,7 @@ the input, a task progress bar and a total token usage line.
 | Four scrims     | Independent 0–100 opacity for the left sidebar, main window, text card and right sidebar; optional separate light/dark values                                        |
 | Composer bar    | A bar as wide as the input wrapping the usage row, with a configurable colour                                                                                        |
 | Task progress   | Todo completion when available, a step estimate while running, hidden when idle                                                                                      |
-| Total tokens    | All-session (archived included) token usage above the account row, adjustable font size                                                                              |
+| Token usage     | All-session total plus calendar-month and subscription-week usage above the account row, adjustable font size; monthly/weekly need the dsh-cost-meter ledger         |
 | Image zoom      | Wheel zoom in the chat image lightbox and right-sidebar preview; double-click resets the lightbox                                                                    |
 
 ![Settings → Page settings](assets/screenshots/settings-page.png)
@@ -51,7 +51,7 @@ Check **Plugins → Installed** to confirm `dsh-chat-background` is enabled.
 dsh plugin --profile desktop add dsh-chat-background
 ```
 
-The npm package tracks the GitHub release (currently `1.1.2`); either channel works.
+The npm package tracks the GitHub release (currently `1.2.0`); either channel works.
 
 ### Manual install
 
@@ -81,7 +81,7 @@ creates it automatically. Drop images in, then press **Rescan** under **Settings
   rotation group; if nothing is checked, the whole library is used.
 - **Progress**: exact when the agent keeps a todo list; otherwise estimated from this turn's steps (capped at 92%);
   hidden while idle.
-- **Tokens**: totals across all sessions (archived included), cached for 10 seconds and refreshed once a minute.
+- **Tokens**: totals across all sessions (archived included), plus calendar-month and subscription-week usage; cached for 10 seconds and refreshed once a minute. Monthly/weekly values come from the local dsh-cost-meter ledger and show `—` when it is absent.
 - **Themes and scrims**: light/dark themes adapt automatically. A 100% scrim is fully opaque; 0% shows the wallpaper.
 - **Right-sidebar full screen**: the left sidebar stays visible while the main window and the original right sidebar
   become the right sidebar content; exiting restores the layout.

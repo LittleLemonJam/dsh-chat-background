@@ -26,6 +26,7 @@ import {
 import { backgroundsDir, dshHomeDir } from './host/paths.js'
 import { createHandlers } from './host/routes.js'
 import { readTokenTotals, readTokenTotalsFromServices } from './host/token-usage.js'
+import { readTokenWindows } from './host/token-windows.js'
 
 /** This plugin owns five routes on the Web server. */
 export const inject = ['webServer']
@@ -73,9 +74,10 @@ function resolveTrustedHosts(ctx) {
  * back to the projection-cache files when they are not mounted.
  * @param ctx - host plugin context.
  * @param tokenDirectory - projection-cache directory used by the fallback.
+ * @param ledgerPath - optional dsh-cost-meter ledger for month/week windows.
  * @returns a function returning the aggregate payload or null.
  */
-function createTokenProvider(ctx, tokenDirectory) {
+function createTokenProvider(ctx, tokenDirectory, ledgerPath) {
   const serviceTotals = async () => {
     const persistence = ctx.get?.('sessionPersistence')
     const projectionCache = ctx.get?.('sessionProjectionCache')
@@ -83,13 +85,16 @@ function createTokenProvider(ctx, tokenDirectory) {
     return readTokenTotalsFromServices({ persistence, projectionCache })
   }
   return async () => {
+    let totals = null
     try {
-      const fromServices = await serviceTotals()
-      if (fromServices !== null) return fromServices
+      totals = await serviceTotals()
     } catch (error) {
       ctx.logger?.warn?.(error instanceof Error ? error : new Error(String(error)))
     }
-    return readTokenTotals(tokenDirectory)
+    if (totals === null) totals = await readTokenTotals(tokenDirectory)
+    if (totals === null) return null
+    const windows = await readTokenWindows(ledgerPath)
+    return { ...totals, monthly: windows?.monthly ?? null, weekly: windows?.weekly ?? null }
   }
 }
 
@@ -100,11 +105,12 @@ function createTokenProvider(ctx, tokenDirectory) {
 export function apply(ctx) {
   const folder = backgroundsDir()
   const tokenDirectory = join(dshHomeDir(), 'storages', 'session_projcache', 'sessions')
+  const ledgerPath = join(dshHomeDir(), 'storages', 'cost-meter', 'ledger.json')
   const handlers = createHandlers({
     folder,
     logger: ctx.logger,
     tokenCacheMs: TOKEN_CACHE_MS,
-    tokenProvider: createTokenProvider(ctx, tokenDirectory),
+    tokenProvider: createTokenProvider(ctx, tokenDirectory, ledgerPath),
     trustedHosts: resolveTrustedHosts(ctx),
     version: PACKAGE_VERSION
   })

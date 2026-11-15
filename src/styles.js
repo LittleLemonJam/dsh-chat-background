@@ -871,6 +871,14 @@ ${active} :is([data-slot="settings.section"], [data-slot="settings.header"], [da
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.dshcb-token-line {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dshcb-token-line + .dshcb-token-line {
+  margin-top: 1px;
+}
 `.trim()
 
 /**

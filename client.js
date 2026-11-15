@@ -1,5 +1,5 @@
 /**
- * dsh-chat-background v1.1.2
+ * dsh-chat-background v1.2.0
  * Chat background image, sidebar veil, composer strip, task progress bar and all-session token total for the DeepSeek Harness (DSH) Web GUI.
  * @author LittleLemonJam
  * @license MIT
@@ -99,7 +99,7 @@
   }
   function diagnosticsSnapshot() {
     return {
-      version: true ? "1.1.2" : "unknown",
+      version: true ? "1.2.0" : "unknown",
       updatedAt: Date.now(),
       ...state
     };
@@ -385,9 +385,14 @@
     progressColorTitle: "进度条颜色",
     progressColorDescription: "进度条填充色；点色块打开调色盘，也可以恢复默认",
     tokenTitle: "Token 总用量",
-    tokenDescription: "在左下角用户标上方显示所有会话（含已归档）的 token 总用量",
+    tokenDescription: "在左下角用户标上方显示所有会话（含已归档）的 token 总用量、每月用量与每周用量；月度按自然月，周度按订阅 API 的重置窗口（需要 dsh-cost-meter 账本）",
     tokenLabel: "Token总用量：",
+    tokenMonthLabel: "Token每月用量：",
+    tokenWeekLabel: "Token每周用量：",
     tokenHint: "全部会话累计：{exact} token（含缓存读取；{sessions}/{all} 个会话有用量）",
+    tokenMonthHint: "本月 {from} 至 {to} 累计：{exact} token（来自 dsh-cost-meter 账本）",
+    tokenWeekHint: "当前订阅周 {from} 至 {to}（重置于 {reset}）累计：{exact} token",
+    tokenWindowUnavailable: "月度/周度统计需要安装并启用 dsh-cost-meter 账本",
     tokenSizeTitle: "Token 字号",
     tokenSizeDescription: "这一行的字号，10–20 px",
     modeTitle: "背景显示方式",
@@ -439,9 +444,14 @@
     progressColorTitle: "Progress colour",
     progressColorDescription: "Fill of the progress bar; click the swatch to open a colour picker, or reset it",
     tokenTitle: "Total token usage",
-    tokenDescription: "Shows the token total of every session (archived included) above the account row",
+    tokenDescription: "Shows total, monthly and weekly token usage of every session above the account row; months follow the calendar and weeks follow the subscription API reset window (requires the dsh-cost-meter ledger)",
     tokenLabel: "Total tokens: ",
+    tokenMonthLabel: "Monthly tokens: ",
+    tokenWeekLabel: "Weekly tokens: ",
     tokenHint: "All sessions: {exact} tokens (cache reads included; {sessions}/{all} sessions carry usage)",
+    tokenMonthHint: "This month ({from} - {to}): {exact} tokens (from the dsh-cost-meter ledger)",
+    tokenWeekHint: "Current subscription week ({from} - {to}, resets {reset}): {exact} tokens",
+    tokenWindowUnavailable: "Monthly/weekly totals need the installed and enabled dsh-cost-meter ledger",
     tokenSizeTitle: "Token font size",
     tokenSizeDescription: "Font size of that line, 10–20 px",
     modeTitle: "Background display",
@@ -761,6 +771,19 @@
     if (element.parentElement !== anchor.parent || element.nextElementSibling !== anchor.before) {
       anchor.parent.insertBefore(element, anchor.before);
     }
+    const line = (name) => {
+      let row = element.querySelector(`[data-token-line="${name}"]`);
+      if (row === null) {
+        row = document.createElement("div");
+        row.className = "dshcb-token-line";
+        row.setAttribute("data-token-line", name);
+        element.append(row);
+      }
+      return row;
+    };
+    const totalRow = line("total");
+    const monthRow = line("month");
+    const weekRow = line("week");
     const account = anchor.parent.querySelector('[data-slot="settings.launcher"] button') ?? anchor.parent.querySelector('button[aria-label="账号菜单"]') ?? anchor.parent.querySelector('button[aria-label="Account menu"]');
     if (account !== null) {
       const accountPadding = Number.parseFloat(getComputedStyle(account).paddingLeft) || 0;
@@ -773,13 +796,43 @@
     }
     const total = tokenValue !== null && typeof tokenValue.total === "number" ? tokenValue.total : null;
     const missing = tokenValue !== null && tokenValue.missing === true;
-    const text = copy.tokenLabel + (total === null ? "…" : missing ? "—" : formatCompactTokens(total));
-    if (element.textContent !== text) element.textContent = text;
+    totalRow.textContent = copy.tokenLabel + (total === null ? "…" : missing ? "—" : formatCompactTokens(total));
     if (tokenValue !== null) {
-      const hint = copy.tokenHint.replaceAll("{exact}", String(tokenValue.total)).replaceAll("{sessions}", String(tokenValue.countedSessions ?? 0)).replaceAll("{all}", String(tokenValue.sessions ?? 0));
-      if (element.title !== hint) element.title = hint;
+      totalRow.title = copy.tokenHint.replaceAll("{exact}", String(tokenValue.total)).replaceAll("{sessions}", String(tokenValue.countedSessions ?? 0)).replaceAll("{all}", String(tokenValue.sessions ?? 0));
     }
+    const windowHint = (payload, template) => {
+      if (payload === null || typeof payload !== "object" || typeof payload.tokens !== "number") {
+        return copy.tokenWindowUnavailable;
+      }
+      return template.replaceAll("{exact}", String(payload.tokens)).replaceAll("{from}", shortDate(payload.windowStart ?? payload.from)).replaceAll("{to}", shortDate(payload.windowEnd ?? payload.to)).replaceAll("{reset}", shortDateTime(payload.resetAt ?? payload.windowEnd));
+    };
+    const monthly = tokenValue?.monthly ?? null;
+    const monthlyTokens = monthly !== null && typeof monthly.tokens === "number" ? monthly.tokens : null;
+    monthRow.textContent = copy.tokenMonthLabel + (monthlyTokens === null ? "—" : formatCompactTokens(monthlyTokens));
+    monthRow.title = windowHint(monthly, copy.tokenMonthHint);
+    const weekly = tokenValue?.weekly ?? null;
+    const weeklyTokens = weekly !== null && typeof weekly.tokens === "number" ? weekly.tokens : null;
+    weekRow.textContent = copy.tokenWeekLabel + (weeklyTokens === null ? "—" : formatCompactTokens(weeklyTokens));
+    weekRow.title = windowHint(weekly, copy.tokenWeekHint);
     return element;
+  }
+  function shortDate(value) {
+    if (typeof value !== "string") return "—";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString(void 0, { year: "numeric", month: "2-digit", day: "2-digit" });
+  }
+  function shortDateTime(value) {
+    if (typeof value !== "string") return "—";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString(void 0, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
   }
 
   // src/lib/turn-masks.js
@@ -3540,6 +3593,14 @@ ${active} :is([data-slot="settings.section"], [data-slot="settings.header"], [da
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.dshcb-token-line {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dshcb-token-line + .dshcb-token-line {
+  margin-top: 1px;
 }
 `.trim();
   function installStyles() {

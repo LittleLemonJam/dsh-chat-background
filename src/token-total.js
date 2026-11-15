@@ -143,6 +143,19 @@ export function renderTokenTotal() {
   if (element.parentElement !== anchor.parent || element.nextElementSibling !== anchor.before) {
     anchor.parent.insertBefore(element, anchor.before)
   }
+  const line = (name) => {
+    let row = element.querySelector(`[data-token-line="${name}"]`)
+    if (row === null) {
+      row = document.createElement('div')
+      row.className = 'dshcb-token-line'
+      row.setAttribute('data-token-line', name)
+      element.append(row)
+    }
+    return row
+  }
+  const totalRow = line('total')
+  const monthRow = line('month')
+  const weekRow = line('week')
   /* Align the text with the account row content edge (the avatar) rather than
    * the row's outer box; the row's own padding differs per platform. */
   const account =
@@ -160,14 +173,60 @@ export function renderTokenTotal() {
   }
   const total = tokenValue !== null && typeof tokenValue.total === 'number' ? tokenValue.total : null
   const missing = tokenValue !== null && tokenValue.missing === true
-  const text = copy.tokenLabel + (total === null ? '…' : missing ? '—' : formatCompactTokens(total))
-  if (element.textContent !== text) element.textContent = text
+  totalRow.textContent = copy.tokenLabel + (total === null ? '…' : missing ? '—' : formatCompactTokens(total))
   if (tokenValue !== null) {
-    const hint = copy.tokenHint
+    totalRow.title = copy.tokenHint
       .replaceAll('{exact}', String(tokenValue.total))
       .replaceAll('{sessions}', String(tokenValue.countedSessions ?? 0))
       .replaceAll('{all}', String(tokenValue.sessions ?? 0))
-    if (element.title !== hint) element.title = hint
   }
+  const windowHint = (payload, template) => {
+    if (payload === null || typeof payload !== 'object' || typeof payload.tokens !== 'number') {
+      return copy.tokenWindowUnavailable
+    }
+    return template
+      .replaceAll('{exact}', String(payload.tokens))
+      .replaceAll('{from}', shortDate(payload.windowStart ?? payload.from))
+      .replaceAll('{to}', shortDate(payload.windowEnd ?? payload.to))
+      .replaceAll('{reset}', shortDateTime(payload.resetAt ?? payload.windowEnd))
+  }
+  const monthly = tokenValue?.monthly ?? null
+  const monthlyTokens = monthly !== null && typeof monthly.tokens === 'number' ? monthly.tokens : null
+  monthRow.textContent = copy.tokenMonthLabel + (monthlyTokens === null ? '—' : formatCompactTokens(monthlyTokens))
+  monthRow.title = windowHint(monthly, copy.tokenMonthHint)
+  const weekly = tokenValue?.weekly ?? null
+  const weeklyTokens = weekly !== null && typeof weekly.tokens === 'number' ? weekly.tokens : null
+  weekRow.textContent = copy.tokenWeekLabel + (weeklyTokens === null ? '—' : formatCompactTokens(weeklyTokens))
+  weekRow.title = windowHint(weekly, copy.tokenWeekHint)
   return element
+}
+
+/**
+ * Short local date for tooltips.
+ * @param value - ISO timestamp.
+ * @returns a readable date, or the original value when unparsable.
+ */
+function shortDate(value) {
+  if (typeof value !== 'string') return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleDateString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' })
+}
+
+/**
+ * Short local date-time for the weekly reset tooltip.
+ * @param value - ISO timestamp.
+ * @returns a readable date-time, or the original value when unparsable.
+ */
+function shortDateTime(value) {
+  if (typeof value !== 'string') return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString(undefined, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }

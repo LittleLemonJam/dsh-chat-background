@@ -90,6 +90,10 @@
       "expr": "(() => { const node = document.querySelector('[data-dsh-token-total]'); if (node === null) return false; const account = document.querySelector('[aria-label=\"账号菜单\"]'); if (account === null) return false; const n = node.getBoundingClientRect(); const a = account.getBoundingClientRect(); return node.innerText.includes('Token') && n.bottom <= a.top + 1; })()"
     },
     {
+      "check": "token line shows total, monthly and weekly rows",
+      "expr": "(() => { const node=document.querySelector('[data-dsh-token-total]'); if(node===null) return false; const names=[...node.querySelectorAll('[data-token-line]')].map((line)=>line.getAttribute('data-token-line')); const text=(name)=>node.querySelector('[data-token-line=\"'+name+'\"]')?.innerText ?? ''; return JSON.stringify(names)===JSON.stringify(['total','month','week']) && text('total').includes('Token总用量') && text('month').includes('Token每月用量') && text('week').includes('Token每周用量'); })()"
+    },
+    {
       "check": "token line text left edge aligns with the account row content edge",
       "expr": "(() => { const token = document.querySelector('[data-dsh-token-total]'); const account = document.querySelector('[aria-label=\"账号菜单\"]'); if (token === null || account === null) return false; const accountPadding = Number.parseFloat(getComputedStyle(account).paddingLeft) || 0; const tokenPadding = Number.parseFloat(getComputedStyle(token).paddingLeft) || 0; const tokenTextLeft = token.getBoundingClientRect().left + tokenPadding; const accountContentLeft = account.getBoundingClientRect().left + accountPadding; return Math.abs(tokenTextLeft - accountContentLeft) <= 1; })()"
     },

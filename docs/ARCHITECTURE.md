@@ -11,7 +11,7 @@
 - 背景图片（来自 `~/.dsh/backgrounds/`）铺满界面；左侧栏、中间主窗口、右侧边栏各有独立的 0–100 遮罩层；
 - 输入栏下方一条与输入卡片等宽、包住用量数据的背景条；
 - 输入栏上方的任务进度条；
-- 侧栏账号行上方的全会话 Token 总用量。
+- 侧栏账号行上方的全会话 Token 总量、自然月用量与订阅周用量。
 
 设置入口是 **设置 → 页面设置**（本插件独占的分区）：**背景**标签 6 行 + **UI**标签 3 组卡片。
 
@@ -24,6 +24,7 @@
 │    host/paths.js          DSH_HOME / backgrounds 目录解析（支持环境变量覆盖）              │
 │    host/media.js          可接受的图片类型、文件名校验、目录清单（name/bytes/mtime/rev）    │
 │    host/token-usage.js    扫描 session_projcache/*.json，汇总四个 token 桶               │
+│    host/token-windows.js  读取 dsh-cost-meter 账本，计算自然月与订阅周窗口               │
 │    host/routes.js         HTTP 处理器：list / files / folder / token-total               │
 └──────────────────────────────────────────┬─────────────────────────────────────────────┘
                                            │ 本机回环 HTTP（/chat-backgrounds/*）
@@ -81,13 +82,13 @@ composer 包装层 ResizeObserver（纯样式尺寸） ──┘        ├─ a
 
 五条路由（路径常量集中在 `host/constants.js`，浏览器半在 `src/constants.js` 镜像）：
 
-| 路由                                 | 方法       | 返回                                                                                                                                      |
-| ------------------------------------ | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /chat-backgrounds/list`         | GET / HEAD | `{ folder, accepted, images: [{ name, bytes, mtimeMs, rev }] }`                                                                           |
-| `GET /chat-backgrounds/files/<name>` | GET / HEAD | 图片字节；`ETag`、`cache-control: private, max-age=0, must-revalidate`（SEC-06）                                                          |
-| `POST /chat-backgrounds/folder`      | POST       | `{ folder, opened: true }`；在资源管理器中打开目录                                                                                        |
-| `GET /chat-backgrounds/token-total`  | GET / HEAD | `{ total, uncachedInputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, sessions, countedSessions, scannedAt, source, missing? }` |
-| `GET /chat-backgrounds/health`       | GET / HEAD | `{ ok, version, folder, accepted, limits, fence }`                                                                                        |
+| 路由                                 | 方法       | 返回                                                                                                                                                       |
+| ------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /chat-backgrounds/list`         | GET / HEAD | `{ folder, accepted, images: [{ name, bytes, mtimeMs, rev }] }`                                                                                            |
+| `GET /chat-backgrounds/files/<name>` | GET / HEAD | 图片字节；`ETag`、`cache-control: private, max-age=0, must-revalidate`（SEC-06）                                                                           |
+| `POST /chat-backgrounds/folder`      | POST       | `{ folder, opened: true }`；在资源管理器中打开目录                                                                                                         |
+| `GET /chat-backgrounds/token-total`  | GET / HEAD | `{ total, uncachedInputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, sessions, countedSessions, scannedAt, source, monthly, weekly, missing? }` |
+| `GET /chat-backgrounds/health`       | GET / HEAD | `{ ok, version, folder, accepted, limits, fence }`                                                                                                         |
 
 失败语义：
 
@@ -111,7 +112,7 @@ composer 包装层 ResizeObserver（纯样式尺寸） ──┘        ├─ a
   只使用文档化的 `id/order/label/locale` 注册选项；背景标签 6 行 + UI 标签 3 组卡片由 `PageSection` 直接组合渲染，不再声明子槽。
 - 进度条：注册进 `conversation.input.dock`（composer 卡片上方的整行条目），`id: chat-background-progress`、
   `order: 12`（避开宿主 GoalDock 与队列条占位）；空闲（无清单、未运行）时不渲染。
-- Token 行：不是槽位，而是运行时注入 `<div data-dsh-token-total>` 到账号行前；锚点按
+- Token 行：不是槽位，而是运行时注入 `<div data-dsh-token-total>`（内含总/月/周三行）到账号行前；锚点按
   `[class*="settingsArea"]` → `[data-slot="sidebar.settings"]` 父行 → footer 容器 依次尝试并校验位置。
 - 清理：所有副作用都通过 `ctx.effect(...)` 注册清理函数（样式表、观察者、interval、ResizeObserver）。
 

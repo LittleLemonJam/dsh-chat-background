@@ -28,7 +28,7 @@
     },
     {
       "check": "token total is internally consistent",
-      "expr": "(async () => { const response = await fetch('/chat-backgrounds/token-total'); if (!response.ok) return false; const payload = await response.json(); const sum = payload.uncachedInputTokens + payload.outputTokens + payload.cacheReadTokens + payload.cacheWriteTokens; return payload.total === sum && Number.isInteger(payload.sessions) && Number.isInteger(payload.countedSessions) && payload.countedSessions <= payload.sessions; })()"
+      "expr": "(async () => { const response = await fetch('/chat-backgrounds/token-total'); if (!response.ok) return false; const payload = await response.json(); const sum = payload.uncachedInputTokens + payload.outputTokens + payload.cacheReadTokens + payload.cacheWriteTokens; const windowOk = (value) => value === null || (typeof value === 'object' && typeof value.tokens === 'number'); return payload.total === sum && Number.isInteger(payload.sessions) && Number.isInteger(payload.countedSessions) && payload.countedSessions <= payload.sessions && windowOk(payload.monthly) && windowOk(payload.weekly); })()"
     },
     {
       "shot": "04-host-routes"
